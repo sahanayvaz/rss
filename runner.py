@@ -6,9 +6,11 @@ TODO: implement recurrent version
 '''
 
 class Runner(object):
-    def __init__(self, env, nenvs, policy, nsteps, cliprew):
+    def __init__(self, env, test_env, nenvs, policy, nsteps, cliprew):
         # environment related
         self.env = env
+        self.test_env = test_env
+
         self.nenvs = nenvs
         self.ob_space = env.observation_space
         self.ac_space = env.action_space
@@ -61,7 +63,7 @@ class Runner(object):
         if self.cliprew:
             self.buf_rews[:] = np.clip(self.buf_rews, -1.0, 1.0)
 
-    def evaluate(self, nlevels, save_video):
+    def eval_step(self, nlevels, save_video, env, name):
         # this is NOT a good practice
         eval_news = 0.0
         eval_rews = []
@@ -70,21 +72,25 @@ class Runner(object):
         eval_flag = []
         eval_imgs = []
 
-        nenv_rews = np.zeros(self.env.num_envs)
-        nenv_lengths = np.zeros(self.env.num_envs)
+        nenv_rews = np.zeros(env.num_envs)
+        nenv_lengths = np.zeros(env.num_envs)
 
-        buf_imgs = [[] for _ in range(self.env.num_envs)]
+        buf_imgs = [[] for _ in range(env.num_envs)]
+
+        obs = env.reset()
 
         while eval_news < nlevels:
-            acs, vals, nlps = self.policy.step(self.obs)
-            self.obs, rews, news, infos = self.env.step(acs)
+            acs, vals, nlps = self.policy.step(obs)
+            obs, rews, news, infos = env.step(acs)
 
+            '''
             if save_video:
                 ## if we are going to render images this way, i NEED to change 
                 ## stable_baselines.common.vec_env.subproc_vec_env.py
-                imgs = self.env.get_images()
+                imgs = env.get_images()
                 for i, img in enumerate(imgs):
                     buf_imgs[i].append(copy.deepcopy(imgs[i]))
+            '''
 
             nenv_rews += rews
             nenv_lengths += 1.0
@@ -117,20 +123,27 @@ class Runner(object):
                     nenv_lengths[i] = 0
                     eval_news += 1
 
-        results = {'rew_mean': np.mean(eval_rews),
-                   'rew_std': np.std(eval_rews),
-                   'rew_max': np.max(eval_rews),
-                   'rew_min': np.min(eval_rews),
-                   'rew_maxID': np.argmax(eval_rews),
-                   'rew_minID': np.argmin(eval_rews),
-                   'len_mean': np.mean(eval_lengths),
-                   'len_std': np.std(eval_lengths),
-                   'x_mean': np.mean(eval_xpos),
-                   'x_std': np.std(eval_xpos),
-                   'x_max': np.max(eval_xpos),
-                   'x_min': np.min(eval_xpos),
-                   'x_maxID': np.argmax(eval_xpos),
-                   'x_minID': np.argmin(eval_xpos),
-                   'flag_sum': np.sum(eval_flag)}
+        results = {'{}-rew_mean'.format(name): np.mean(eval_rews),
+                   '{}-rew_std'.format(name): np.std(eval_rews),
+                   '{}-rew_max'.format(name): np.max(eval_rews),
+                   '{}-rew_min'.format(name): np.min(eval_rews),
+                   '{}-rew_maxID'.format(name): np.argmax(eval_rews),
+                   '{}-rew_minID'.format(name): np.argmin(eval_rews),
+                   '{}-len_mean'.format(name): np.mean(eval_lengths),
+                   '{}-len_std'.format(name): np.std(eval_lengths),
+                   '{}-x_mean'.format(name): np.mean(eval_xpos),
+                   '{}-x_std'.format(name): np.std(eval_xpos),
+                   '{}-x_max'.format(name): np.max(eval_xpos),
+                   '{}-x_min'.format(name): np.min(eval_xpos),
+                   '{}-x_maxID'.format(name): np.argmax(eval_xpos),
+                   '{}-x_minID'.format(name): np.argmin(eval_xpos),
+                   '{}-flag_sum'.format(name): np.sum(eval_flag)}
+        return results
 
-        return results, eval_imgs
+    def evaluate(self, nlevels, save_video):
+        train_results = self.eval_step(nlevels=nlevels, save_video=save_video, 
+                                       env=self.env, name='train')
+        test_results = self.eval_step(nlevels=nlevels, save_video=save_video, 
+                                      env=self.test_env, name='test')
+        train_results.update(test_results)
+        return train_results, None

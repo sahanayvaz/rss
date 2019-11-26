@@ -6,7 +6,6 @@ from tensorflow.python.ops.parallel_for.gradients import batch_jacobian
 from attention.RelationalBlock import RelationalBlock
 
 import utils
-from context import ContextGenerator
 
 sess = tf.get_default_session
 
@@ -18,7 +17,8 @@ class Policy(object):
                  jacobian_loss, nparticles,
                  entity_loss, tol_entity_loss, nentities_per_state, nentities_per_batch,
                  entity_randomness,
-                 num_repeat, num_replace_ratio, feat_dim, context_dim, max_get,
+                 num_repeat, num_replace_ratio,
+                 add_noise,
                  vf_coef, coinrun):
         
         # warnings
@@ -64,10 +64,12 @@ class Policy(object):
         self.num_repeat = int(num_repeat)
         self.num_replace_ratio = int(num_replace_ratio)
         self.entity_randomness = entity_randomness
-
+        
         self.ob_mean = ob_mean
         self.ob_std = ob_std
 
+        self.add_noise = add_noise
+        
         self.layernormalize = layernormalize
         self.batchnormalize = batchnormalize
         self.attention = attention
@@ -98,7 +100,7 @@ class Policy(object):
         self.perception = perception
 
         # feature dimensions (HARD-CODED NOT GOOD)
-        self.feat_dim = feat_dim
+        self.feat_dim = 512
 
         # policy module
         self.policy_spec = policy_spec
@@ -122,8 +124,6 @@ class Policy(object):
                                                     name='ob'))
 
             self.ph_ac = self.ac_pdtype.sample_placeholder([None], name='ac')
-            self.ph_adv = tf.placeholder(tf.float32, [None,])
-
             self.pd = self.vpred = None
             self.scope = scope
             self.pdparamsize = self.ac_pdtype.param_shape()[0]
@@ -157,28 +157,30 @@ class Policy(object):
             self.nlp_samp = pd.neglogp(self.a_samp)
             self.logits = pdparam
 
-            self.full_trajectory = tf.concat([self.features,
-                                              self.logits,
-                                              tf.expand_dims(self.ph_adv, -1)], axis=-1)
-
-            # a random context vector
-            num_input_feat = feat_dim + ac_space.n + 1
-            print('num_input_feat: {}'.format(num_input_feat))
-        
-            contextor = ContextGenerator(num_input_feat=num_input_feat,
-                                         context_dim=context_dim,
-                                         trajectory=tf.stop_gradient(tf.expand_dims(self.full_trajectory, 0)))
-
-            self.contexts = contextor.outputs
-
-            self.policy_context = tf.stop_gradient(tf.reshape(tf.tile(tf.squeeze(self.contexts)[-1, :], [max_get]), [max_get, context_dim]))
-
             print('policy.py, class Policy, def __init__, pdparam.shape: {}, pdparam.dtype: {}'.format(pdparam.shape, pdparam.dtype))
             print('policy.py, class Policy, def __init__, self.vpred: {}'.format(self.vpred.shape))
             print('policy.py, class Policy, def __init__, self.a_samp: {}'.format(self.a_samp.shape))
             print('policy.py, class Policy, def __init__, self.entropy.shape: {}'.format(self.entropy.shape))
             print('policy.py, class Policy, def __init__, self.nlp_samp.shape: {}'.format(self.nlp_samp.shape))
             print('policy.py, class Policy, def __init__, self.logits.shape: {}'.format(self.logits.shape))
+
+            '''
+            # major change to jacobian_loss
+            if jacobian_loss:
+                self.ph_feats = tf.placeholder(dtype=self.features.dtype, shape=(None, self.feat_dim), name='ph_feats')
+                self.ph_logits = tf.placeholder(dtype=pdparam.dtype, shape=(None, ac_space.n), name='ph_logits')
+                self.ph_vpreds = tf.placeholder(dtype=self.vpred.dtype, shape=(None,), name='ph_vpreds')
+
+                # HARD-CODED feat_dim: not a good practice
+                self.ph_jacobians = tf.placeholder(dtype=pdparam.dtype, shape=(None, ac_space.n, self.feat_dim), name='ph_jacobians')
+                self.ph_tol_jacobian_loss = tf.placeholder(tf.float32, [])
+
+                self.jacobians = batch_jacobian(tf.nn.softmax(self.logits), self.features)
+
+                print('policy.py, class Policy, def __init__, jacobian.shape: {}'.format(self.jacobians.shape))
+
+                self.pol_jacobian_loss, self.rep_jacobian_loss = self.get_jacobian_loss()
+            '''
 
             # jacobian_loss 1 is the full input
             if jacobian_loss == 1:
@@ -258,12 +260,18 @@ class Policy(object):
             # change this to feat_v1
 
             # this is for RSS part
-            self.keep_dim = 20
-            x, random_idx = utils.feat_v1(out=x, feat_dim=self.feat_dim, activation=self.activation, noises=None, keep_dim=self.keep_dim)
+            self.keep_dim = 30
+            print('''
+
+                adding random sparse noise
+
+                ''')
+            x, random_idx, full_dim = utils.feat_v1(out=x, feat_dim=self.feat_dim, activation=self.activation, add_noise=self.add_noise, keep_dim=self.keep_dim)
             
             # we will use those idx to mask the gradients of not-selected indices as well as 
             # inject some noise
             self.random_idx = random_idx
+            self.full_dim = full_dim
             # x = utils.feat_v0(x, feat_dim=self.feat_dim, activation=self.activation)
         return x
 
@@ -301,15 +309,6 @@ class Policy(object):
                                                        self.logits, self.jacobians],
                                                        feed_dict={self.ph_ob: ob})
         return feats, vpreds, logits, jacobians
-
-    # get logits and jacobians
-    def get_feats_logits(self, ob):
-        # in the first experiments, i used nn.softmax to compute jacobians instead of logits
-        # i will use logits for now, possible change in the future
-        feats, logits = sess().run([self.features, self.logits],
-                                    feed_dict={self.ph_ob: ob})
-        return feats, logits
-
 
     # get logits and jacobians
     def get_entities_weights(self, ob):

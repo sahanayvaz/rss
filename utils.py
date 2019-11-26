@@ -102,11 +102,12 @@ def feat_v0(out, feat_dim, activation):
     return out
 
 # i want to make this (sparse and skipped)
-def feat_v1(out, feat_dim, activation, noises, keep_dim):
+# we will train this without adding any noise
+def feat_v1(out, feat_dim, activation,keep_dim, add_noise=False, num_layers=2):
     in_feat_dim = out.shape[-1]
     print('in_feat_dim: {}'.format(in_feat_dim))
-    # random_idx = np.random.randint(low=0, high=in_feat_dim, size=(keep_dim, feat_dim))
     
+    random_idx = []
     # really unoptimized, will work on it LATER
     random_idx_1 = []
     for i in range(feat_dim):
@@ -126,6 +127,23 @@ def feat_v1(out, feat_dim, activation, noises, keep_dim):
     weights = tf.Variable(dense_weights, trainable=True, dtype=tf.float32, name='feat_v1_weights')
     bias_initializer = tf.constant_initializer(0.0)(shape=(feat_dim,))
     biases = tf.Variable(initial_value=bias_initializer, trainable=True, dtype=tf.float32, name='feat_v1_biases')
+
+    if add_noise:
+        # get random weights
+        random_w_idx = []
+        for i in range(feat_dim):
+            r_id = np.random.choice(in_feat_dim, keep_dim, replace=False)
+            for r in r_id:
+                random_w_idx.append([r, i])
+
+        # do not forget to cancel them out
+        random_w = tf.random.normal(shape=[keep_dim * feat_dim],
+                                    mean=0.0,
+                                    stddev=1.0,
+                                    name='random_1')
+        sparse_r_weights = tf.SparseTensor(indices=random_w_idx, values=random_w, dense_shape=(in_feat_dim, feat_dim))
+        dense_r_weights = tf.sparse.to_dense(sparse_r_weights, default_value=0.0, validate_indices=False)
+        weights = weights + dense_r_weights
 
     out_1 = tf.add(tf.matmul(out, weights), biases)
 
@@ -149,18 +167,36 @@ def feat_v1(out, feat_dim, activation, noises, keep_dim):
     weights_2_1 = tf.Variable(dense_weights, trainable=True, dtype=tf.float32, name='feat_v1_weights_2_1')
     bias_initializer = tf.constant_initializer(0.0)(shape=(feat_dim,))
     biases_2_1 = tf.Variable(initial_value=bias_initializer, trainable=True, dtype=tf.float32, name='feat_v1_biases_2_1')
+
+    if add_noise:
+        # get random weights
+        random_w_idx = []
+        for i in range(feat_dim):
+            r_id = np.random.choice(in_feat_dim, keep_dim // 2, replace=False)
+            for r in r_id:
+                random_w_idx.append([r, i])
+
+        # do not forget to cancel them out
+        random_w = tf.random.normal(shape=[(keep_dim // 2) * feat_dim],
+                                    mean=0.0,
+                                    stddev=1.0,
+                                    name='random_2')
+        sparse_r_weights = tf.SparseTensor(indices=random_w_idx, values=random_w, dense_shape=(in_feat_dim, feat_dim))
+        dense_r_weights = tf.sparse.to_dense(sparse_r_weights, default_value=0.0, validate_indices=False)
+        weights_2_1 = weights_2_1 + dense_r_weights
+
     out_2_1 = tf.add(tf.matmul(out, weights_2_1), biases_2_1)
 
     # really unoptimized, will work on it LATER
     random_idx_2 = []
 
     for i in range(feat_dim):
-        r_id = np.random.choice(feat_dim, keep_dim, replace=False)
+        r_id = np.random.choice(feat_dim, keep_dim // 2, replace=False)
         for r in r_id:
             random_idx_2.append([r, i])
 
-    weight_initializer = tf.initializers.orthogonal(1.0)(shape=(keep_dim, feat_dim))
-    weight_init = tf.reshape(weight_initializer, [(keep_dim) * feat_dim])
+    weight_initializer = tf.initializers.orthogonal(1.0)(shape=(keep_dim // 2, feat_dim))
+    weight_init = tf.reshape(weight_initializer, [(keep_dim // 2) * feat_dim])
     # sparse_weights = tf.Variable(initial_value=weight_initializer, trainable=True, dtype=tf.float32, name='sparse_weights')
     print('building sparse_tensor...')
     sparse_weights = tf.SparseTensor(indices=random_idx_2, values=weight_init, dense_shape=(feat_dim, feat_dim))
@@ -168,14 +204,37 @@ def feat_v1(out, feat_dim, activation, noises, keep_dim):
 
     dense_weights = tf.sparse.to_dense(sparse_weights, default_value=0.0, validate_indices=False)
 
-    weights_2 = tf.Variable(dense_weights, trainable=True, dtype=tf.float32, name='feat_v1_weights_2_1')
+    weights_2 = tf.Variable(dense_weights, trainable=True, dtype=tf.float32, name='feat_v1_weights_2')
     bias_initializer = tf.constant_initializer(0.0)(shape=(feat_dim,))
-    biases_2 = tf.Variable(initial_value=bias_initializer, trainable=True, dtype=tf.float32, name='feat_v1_biases_2_1')
+    biases_2 = tf.Variable(initial_value=bias_initializer, trainable=True, dtype=tf.float32, name='feat_v1_biases_2')
+
+    if add_noise:
+        # get random weights
+        random_w_idx = []
+        for i in range(feat_dim):
+            r_id = np.random.choice(feat_dim, keep_dim // 2, replace=False)
+            for r in r_id:
+                random_w_idx.append([r, i])
+
+        # do not forget to cancel them out
+        random_w = tf.random.normal(shape=[(keep_dim // 2) * feat_dim],
+                                    mean=0.0,
+                                    stddev=1.0,
+                                    name='random_3')
+        sparse_r_weights = tf.SparseTensor(indices=random_w_idx, values=random_w, dense_shape=(feat_dim, feat_dim))
+        dense_r_weights = tf.sparse.to_dense(sparse_r_weights, default_value=0.0, validate_indices=False)
+        weights_2 = weights_2 + dense_r_weights
+
     out_2 = tf.add(tf.matmul(out_1, weights_2), biases_2)
     print('out_2.shape: {}'.format(out_2.shape))
-    # return tf.matmul(out, (noises + weights)) + biases
-    # return tf.matmul(out, weights) + biases, random_idx
-    return out_2 + out_2_1, None
+    
+    # we always add bias
+    random_idx = [random_idx_1, feat_dim-1, random_idx_2_1, feat_dim-1, random_idx_2, feat_dim-1]
+    full_dim = [(in_feat_dim, feat_dim), (feat_dim,), 
+                (in_feat_dim, feat_dim), (feat_dim,), 
+                (feat_dim, feat_dim), (feat_dim,)]
+
+    return out_2 + out_2_1, random_idx, full_dim
 
 
 # we are making a lot of changes

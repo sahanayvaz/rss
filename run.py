@@ -10,10 +10,6 @@ from policy import Policy
 from optimizers import PPO
 import utils
 
-# contextor and predictor
-from context import ContextGenerator
-from predictor import GradPredictor
-
 # wrapper modules
 from wrappers import make_coinrun_env, make_mario_vec_env, make_gym_mario_env
 from baselines import logger
@@ -29,7 +25,7 @@ import matplotlib.pyplot as plt
 def start_experiment(**args):
     # create environment
     # coinrun environment is already vectorized
-    env = make_env_all_params(args=args)
+    env, test_env = make_env_all_params(args=args)
     # set random seeds for reproducibility
     utils.set_global_seeds()
 
@@ -48,7 +44,7 @@ def start_experiment(**args):
         print("logging directory: {}".format(args['log_dir']))
 
         # create trainer
-        trainer = Trainer(env=env, args=args)
+        trainer = Trainer(env=env, test_env=test_env, args=args)
 
         if args['evaluation']:
             # load_path is changed to model_path
@@ -72,19 +68,23 @@ def make_env_all_params(args):
             env = make_mario_vec_env(nenvs=args['NUM_ENVS'],
                                      env_id=args['env_id'],
                                      frameskip=args['nframeskip'])
+            test_env = make_mario_vec_env(nenvs=args['NUM_ENVS'],
+                                     env_id=args['test_id'],
+                                     frameskip=args['nframeskip'])
         else:
             raise NotImplementedError()
 
     else:
         # accept only coinrun and mario
         raise NotImplementedError()
-    return env
+    return env, test_env
 
 class Trainer(object):
-    def __init__(self, env, args):
+    def __init__(self, env, test_env, args):
         # coinrun is already vectorized
         # when we switch to mario, make it already vectorized
         self.env = env
+        self.test_env = test_env
         self.args = args
 
         # ntimesteps : total number of timesteps (== number of frames for all experiments)
@@ -120,18 +120,6 @@ class Trainer(object):
         # i think i should also change nparticles to
         nparticles = args['nsteps'] // 2
 
-
-        # context generator and predictor
-        feat_dim = 512
-        
-
-        max_keep_prob = 0.6
-        max_history = 3
-        max_pos = args['nepochs'] * args['nminibatches'] * (1 - max_keep_prob)
-        max_get = int(max_pos * max_history)
-        
-        print('max_get: {}'.format(max_get))
-
         self.policy = Policy(scope='policy',
                              ob_space=self.ob_space,
                              ac_space=self.ac_space,
@@ -157,9 +145,7 @@ class Trainer(object):
                              coinrun=coinrun,
                              num_repeat=args['num_repeat'],
                              num_replace_ratio=args['num_replace_ratio'],
-                             feat_dim=feat_dim,
-                             context_dim=args['context_dim'],
-                             max_get=max_get)
+                             add_noise=args['add_noise'])
 
         # cliprange will be annealed (was 0.1 for mario experiments)
         
@@ -203,40 +189,10 @@ class Trainer(object):
         # max_grad_norm
         max_grad_norm = args['max_grad_norm']
 
-        # i did this for FAST EXPERIMENTATION
-        # so much HARD-CODING
-        if args['policy_spec'] == 'cr_fc_v0':
-            # list_grads = 512 * 7 + 7
-            list_grads = [[512, 7], [7], [512, 1], [1]]
-        else:
-            raise NotImplementedError()
-
-        # self.max_iter gives us max_iter in terms of policy+representation learning
-        ###
-        ### ADD THOSE TO CONFIG
-        # gradpred_init_iter, gradpred_inter, max_temp, min_temp -> MUST GO TO CONFIG
-        ### DO NOT FORGET
-        ###
-
-        with tf.variable_scope('predictor', reuse=False):
-            self.gradpred_init_iter = 5000
-            self.gradpred_inter = 1500
-
-            # i want to reach to the final temperature before the last update
-            max_iter = (self.max_iter - self.gradpred_init_iter) // self.gradpred_inter
-            self.predictor = GradPredictor(cap_buf=args['cap_buf'],
-                                           list_grads=list_grads,
-                                           context_dim=args['context_dim'],
-                                           min_temp=0.6,
-                                           max_iter=max_iter,
-                                           max_pos=max_pos,
-                                           max_history=max_history,
-                                           policy_context=self.policy.policy_context,
-                                           csv_path=os.path.join(args['log_dir'], 'grad_predictor.csv'))
-
         # get ob_space from self.policy
         self.agent = PPO(scope='ppo',
                          env=self.env,
+                         test_env=self.test_env,
                          nenvs=args['NUM_ENVS'],
                          save_dir=args['save_dir'],
                          log_dir=args['log_dir'],
@@ -259,15 +215,7 @@ class Trainer(object):
                          entity_loss=args['entity_loss'],
                          entity_randomness=args['entity_randomness'],
                          nentities_per_batch=nentities_per_batch,
-                         num_traj_rep=args['num_traj_rep'],
-                         list_grads=list_grads,
-                         cap_buf=args['cap_buf'],
-                         context_dim=args['context_dim'],
-                         predictor=self.predictor,
-                         max_keep_prob=max_keep_prob,
-                         max_history=max_history,
-                         max_get=max_get,
-                         update_freq=args['update_freq'])
+                         for_visuals=args['for_visuals'])
 
     def _load_mean_std(self, load_path_pkl):
         with open(load_path_pkl, 'rb') as file_:
@@ -279,7 +227,7 @@ class Trainer(object):
         self.ob_space, self.ac_space = self.env.observation_space, self.env.action_space
 
         self.ob_mean, self.ob_std = 0.0, 1.0
-
+        
         if self.args['norm_obs']:        
             if self.args['evaluation']:
                 load_path = self.args['load_path'][0].split('/')[:-1]
@@ -323,17 +271,6 @@ class Trainer(object):
             self.agent.load(load_path)
             curr_iter = restore_iter
 
-            # i also need to restore the buf_contexts, buf_grads, predictor stats
-            extra_load_path = os.path.join(self.args['save_dir'], 'extras-{}.npz'.format(restore_iter))
-            loaded = np.load(extra_load_path)
-            self.agent.buf_grads = [[], [], loaded['grads'].tolist()]
-            self.agent.buf_contexts = [[], [], loaded['contexts'].tolist()]
-
-            self.predictor.c_mean = loaded['c_mean']
-            self.predictor.c_std = loaded['c_std']
-            self.predictor.g_mean = loaded['g_mean']
-            self.predictor.g_std = loaded['g_std']
-
         print('max_iter: {}'.format(self.max_iter))
 
         # interim saves to compare in the future
@@ -363,12 +300,9 @@ class Trainer(object):
             # linearly increasing penalty
             curr_beta_entity = self.beta_entity_loss(1.0 - frac)
             
-            # CHANGED TO TEST
-            # rep_train = ((curr_iter + 1) % 5 == 0)
-
-            rep_train = ((curr_iter + 1) % self.gradpred_inter == 0) if (curr_iter > self.gradpred_init_iter) else ((curr_iter + 1) % self.gradpred_init_iter == 0)
-            
-            info = self.agent.update(rep_train=rep_train, curr_iter=curr_iter, lr=curr_lr, cliprange=curr_cr, 
+            # representation learning in each 25 steps
+            rep_train = ((curr_iter + 1) % 25 == 0)
+            info = self.agent.update(rep_train=rep_train, lr=curr_lr, cliprange=curr_cr, 
                                      beta_jacobian_loss=curr_beta_jc, tol_jacobian_loss=curr_tol_jc, 
                                      beta_entity_loss=curr_beta_entity)
             end_time = time.time()
@@ -392,7 +326,7 @@ class Trainer(object):
             ## evaluate each 100 run for 20 training levels
             # only for mario
             if self.args['env_kind'] == 'mario':
-                if curr_iter % 100 == 0:
+                if curr_iter % self.args['save_interval'] == 0:
                     save_video = False
                     nlevels = 20
                     results, _ = self.agent.evaluate(nlevels, save_video)
@@ -400,20 +334,16 @@ class Trainer(object):
                     for (k, v) in results.items():
                         self.result_logger.logkv(k, v)
                     self.result_logger.dumpkvs()
-                    # results_list.append(results)
-
-            # print('elapsed time: {}'.format(elapsed_time))
-            # print('expected hours to complete experiment: {}'.format(elapsed_time * self.max_iter / 3600.0))
 
             if curr_iter % self.args['save_interval'] == 0:
-                self.agent.save(curr_iter)
+                self.agent.save(curr_iter, cliprange=curr_cr)
 
             if curr_iter == inter_save1 or curr_iter == inter_save2 or curr_iter == inter_save3:
-                self.agent.save(curr_iter)
+                self.agent.save(curr_iter, cliprange=curr_cr)
 
             curr_iter += 1
 
-        self.agent.save(curr_iter)
+        self.agent.save(curr_iter, cliprange=curr_cr)
 
         '''
         csv_columns = results_list[0].keys()

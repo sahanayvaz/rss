@@ -4,8 +4,9 @@ import os
 
 def add_environment_params(parser):
     # environment configs
-    parser.add_argument('--env_kind', type=str, default='coinrun')
-    parser.add_argument('--env_id', type=str, default='coinrun')
+    parser.add_argument('--env_kind', type=str, default='mario')
+    parser.add_argument('--env_id', type=str, default='SuperMarioBros-1-1-v0')
+    parser.add_argument('--test_id', type=str, default='SuperMarioBros-2-1-v0')
     parser.add_argument('--NUM_ENVS', type=int, default=8)
     parser.add_argument('--NUM_LEVELS', type=int, default=500)
 
@@ -68,12 +69,6 @@ def add_optimization_params(parser):
     parser.add_argument('--num_repeat', type=int, default=4)
     parser.add_argument('--num_replace_ratio', type=int, default=2)
 
-    ## trajectory repeat to collect training samples
-    parser.add_argument('--num_traj_rep', type=int, default=2)
-    parser.add_argument('--cap_buf', type=int, default=100000)
-    parser.add_argument('--context_dim', type=int, default=256)
-    parser.add_argument('--update_freq', type=int, default=1)
-
 def add_rollout_params(parser):
     # rollout related params
     # the original coinrun uses 32 environments per works with 256 timesteps per env
@@ -105,6 +100,8 @@ def add_network_params(parser):
     # we did not implement LSTM yet
     parser.add_argument('--recurrent', type=int, default=0)
 
+    parser.add_argument('--add_noise', type=int, default=0)
+    
 def add_saver_loger_params(parser):
     # saver_loger params
     parser.add_argument('--save_interval', type=int, default=1000)
@@ -124,6 +121,7 @@ if __name__ == '__main__':
     ## evaluation
     parser.add_argument('--exp_name', type=str, default='m000')
     parser.add_argument('--evaluation', type=int, default=0)
+    parser.add_argument('--for_visuals', type=int, default=0)
     args = parser.parse_args()
 
     if args.jacobian_loss:
