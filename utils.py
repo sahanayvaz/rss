@@ -103,7 +103,7 @@ def feat_v0(out, feat_dim, activation):
 
 # i want to make this (sparse and skipped)
 # we will train this without adding any noise
-def feat_v1(out, feat_dim, activation,keep_dim, add_noise=False, num_layers=2):
+def feat_v1(out, feat_dim, activation,keep_dim, add_noise=False, keep_noise=0, num_layers=2):
     in_feat_dim = out.shape[-1]
     print('in_feat_dim: {}'.format(in_feat_dim))
     
@@ -132,12 +132,12 @@ def feat_v1(out, feat_dim, activation,keep_dim, add_noise=False, num_layers=2):
         # get random weights
         random_w_idx = []
         for i in range(feat_dim):
-            r_id = np.random.choice(in_feat_dim, keep_dim, replace=False)
+            r_id = np.random.choice(in_feat_dim, keep_noise, replace=False)
             for r in r_id:
                 random_w_idx.append([r, i])
 
         # do not forget to cancel them out
-        random_w = tf.random.normal(shape=[keep_dim * feat_dim],
+        random_w = tf.random.normal(shape=[keep_noise * feat_dim],
                                     mean=0.0,
                                     stddev=1.0,
                                     name='random_1')
@@ -168,16 +168,19 @@ def feat_v1(out, feat_dim, activation,keep_dim, add_noise=False, num_layers=2):
     bias_initializer = tf.constant_initializer(0.0)(shape=(feat_dim,))
     biases_2_1 = tf.Variable(initial_value=bias_initializer, trainable=True, dtype=tf.float32, name='feat_v1_biases_2_1')
 
+    # poor man's added noise
+    # this should not be like that, we should be changing the connections
+    # let's try this first
     if add_noise:
         # get random weights
         random_w_idx = []
         for i in range(feat_dim):
-            r_id = np.random.choice(in_feat_dim, keep_dim // 2, replace=False)
+            r_id = np.random.choice(in_feat_dim, keep_noise // 2, replace=False)
             for r in r_id:
                 random_w_idx.append([r, i])
 
         # do not forget to cancel them out
-        random_w = tf.random.normal(shape=[(keep_dim // 2) * feat_dim],
+        random_w = tf.random.normal(shape=[(keep_noise // 2) * feat_dim],
                                     mean=0.0,
                                     stddev=1.0,
                                     name='random_2')
@@ -212,12 +215,12 @@ def feat_v1(out, feat_dim, activation,keep_dim, add_noise=False, num_layers=2):
         # get random weights
         random_w_idx = []
         for i in range(feat_dim):
-            r_id = np.random.choice(feat_dim, keep_dim // 2, replace=False)
+            r_id = np.random.choice(feat_dim, keep_noise // 2, replace=False)
             for r in r_id:
                 random_w_idx.append([r, i])
 
         # do not forget to cancel them out
-        random_w = tf.random.normal(shape=[(keep_dim // 2) * feat_dim],
+        random_w = tf.random.normal(shape=[(keep_noise // 2) * feat_dim],
                                     mean=0.0,
                                     stddev=1.0,
                                     name='random_3')

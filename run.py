@@ -145,7 +145,8 @@ class Trainer(object):
                              coinrun=coinrun,
                              num_repeat=args['num_repeat'],
                              num_replace_ratio=args['num_replace_ratio'],
-                             add_noise=args['add_noise'])
+                             add_noise=args['add_noise'],
+                             keep_noise=args['keep_noise'])
 
         # cliprange will be annealed (was 0.1 for mario experiments)
         
