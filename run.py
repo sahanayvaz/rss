@@ -1,0 +1,521 @@
+# base modules
+import os
+
+# necessary modules
+import tensorflow as tf
+import numpy as np
+
+# policy and optimizer-related modules
+from policy import Policy
+from optimizers import PPO
+import utils
+
+# contextor and predictor
+from context import ContextGenerator
+from predictor import GradPredictor
+
+# wrapper modules
+from wrappers import make_coinrun_env, make_mario_vec_env, make_gym_mario_env
+from baselines import logger
+
+# extras
+import csv
+import json
+import cloudpickle
+import cv2
+import time
+import matplotlib.pyplot as plt
+
+def start_experiment(**args):
+    # create environment
+    # coinrun environment is already vectorized
+    env = make_env_all_params(args=args)
+    # set random seeds for reproducibility
+    utils.set_global_seeds()
+
+    # create tf.session
+    tf_sess = utils.setup_tensorflow_session()
+
+    if args['server_type'] == 'local':
+        logger_context = logger.scoped_configure(dir=args['log_dir'],
+                                                 format_strs=['stdout', 'csv'])
+    else:
+        logger_context = logger.scoped_configure(dir=args['log_dir'],
+                                                 format_strs=['csv'])
+
+
+    with logger_context, tf_sess:
+        print("logging directory: {}".format(args['log_dir']))
+
+        # create trainer
+        trainer = Trainer(env=env, args=args)
+
+        if args['evaluation']:
+            # load_path is changed to model_path
+            print('run.py, def start_experiment, evaluating model: {}'.format(args['load_path']))
+            trainer.eval()
+
+        else:
+            print('run.py, def start_experiment, training begins...')
+            trainer.train()
+
+def make_env_all_params(args):
+    if args['env_kind'] == 'coinrun':
+        # DO NOT FORGET coinrun_wrapper module
+        if args['input_shape'] == '64x64':
+            env = make_coinrun_env(args)
+        else:
+            raise NotImplementedError()
+
+    elif args['env_kind'] == 'mario':
+        if args['input_shape'] == '84x84':
+            env = make_mario_vec_env(nenvs=args['NUM_ENVS'],
+                                     env_id=args['env_id'],
+                                     frameskip=args['nframeskip'])
+        else:
+            raise NotImplementedError()
+
+    else:
+        # accept only coinrun and mario
+        raise NotImplementedError()
+    return env
+
+class Trainer(object):
+    def __init__(self, env, args):
+        # coinrun is already vectorized
+        # when we switch to mario, make it already vectorized
+        self.env = env
+        self.args = args
+
+        # ntimesteps : total number of timesteps (== number of frames for all experiments)
+        # make necessary changes when you move to mario
+        # nsteps : number of timesteps per rollout
+        # nenvs : number of parallel rollouts
+        # nframeskip : number of frames to skip (we count the skipped frames as experiences)
+        self.max_iter = int(args['num_timesteps']) // (args['nsteps'] * args['NUM_ENVS'] * args['nframeskip'])
+        
+        # set environment variables
+        self._set_env_vars()
+
+        # we merged cnn and lstm policies in Policy
+        # calculate num_entities automatically from ob_space.shape and perception
+        # kernels and strides
+
+        coinrun = 1 if self.args['env_kind'] == 'coinrun' else 0
+
+        # add nentities_per_batch to create_config: nentities_per_batch are the number of sample (base)
+        # entities to do comparison
+
+        # nentities_per_batch should be calculated automatically
+        nentities_per_state = utils.get_nentities_per_state(self.ob_space.shape, args['attention'])
+        print('nentities_per_state: {}'.format(nentities_per_state))
+
+        # let's decrease the number
+        # this is how we defined it in policy.py
+        # args['nsteps'] * args['NUM_ENVS'] is the batch size
+        # this way we could just shuffle E and then re-feed
+        nentities_per_batch = args['nsteps'] * args['NUM_ENVS'] * nentities_per_state // 4
+        print('nentities_per_batch: {}'.format(nentities_per_batch))
+
+        # i think i should also change nparticles to
+        nparticles = args['nsteps'] // 2
+
+
+        # context generator and predictor
+        feat_dim = 512
+        
+
+        max_keep_prob = 0.6
+        max_history = 3
+        max_pos = args['nepochs'] * args['nminibatches'] * (1 - max_keep_prob)
+        max_get = int(max_pos * max_history)
+        
+        print('max_get: {}'.format(max_get))
+
+        self.policy = Policy(scope='policy',
+                             ob_space=self.ob_space,
+                             ac_space=self.ac_space,
+                             ob_mean=self.ob_mean,
+                             ob_std=self.ob_std,
+                             perception=args['perception'],
+                             policy_spec=args['policy_spec'],
+                             activation=args['activation'],
+                             layernormalize=args['layernormalize'],
+                             batchnormalize=args['batchnormalize'],
+                             attention=args['attention'],
+                             reduce_max=args['reduce_max'],
+                             dropout_attention=args['dropout_attention'],
+                             recurrent=args['recurrent'],
+                             jacobian_loss=args['jacobian_loss'],
+                             nparticles=nparticles,
+                             entity_loss=args['entity_loss'],
+                             entity_randomness=args['entity_randomness'],
+                             tol_entity_loss=args['tol_entity_loss'],
+                             nentities_per_state=nentities_per_state,
+                             nentities_per_batch=nentities_per_batch,
+                             vf_coef=args['vf_coef'],
+                             coinrun=coinrun,
+                             num_repeat=args['num_repeat'],
+                             num_replace_ratio=args['num_replace_ratio'],
+                             feat_dim=feat_dim,
+                             context_dim=args['context_dim'],
+                             max_get=max_get)
+
+        # cliprange will be annealed (was 0.1 for mario experiments)
+        
+        # linear annealing for learning rate
+        lr = args['lr']
+        if args['lr_lambda']:
+            print('''
+
+                linearly annealing lambda
+
+                ''')
+            lr = lambda f: f * args['lr']
+        
+        # linear annealing for cliprange
+        cliprange = args['cliprange']
+        if args['cliprange_lambda']:
+            print('''
+
+                linearly annealing cliprange
+                
+                ''')
+            
+            cliprange = lambda f: f * args['cliprange']
+
+        ## lr and cliprange are lambda functions
+        if isinstance(lr, float): lr = utils.constfn(lr)
+        else: assert callable(lr)
+        self.lr = lr
+
+        if isinstance(cliprange, float): cliprange = utils.constfn(cliprange)
+        else: assert callable(cliprange)
+        self.cliprange = cliprange
+
+        # added beta jacobian loss annealing
+        self.beta_jacobian_loss = lambda f: f * args['beta_jacobian_loss']
+        self.tol_jacobian_loss = lambda f: f * args['tol_jacobian_loss']
+
+        self.beta_entity_loss = lambda f: f * args['beta_entity_loss']
+        self.tol_jacobian_loss = lambda f: f * args['tol_jacobian_loss']
+
+        # max_grad_norm
+        max_grad_norm = args['max_grad_norm']
+
+        # i did this for FAST EXPERIMENTATION
+        # so much HARD-CODING
+        if args['policy_spec'] == 'cr_fc_v0':
+            # list_grads = 512 * 7 + 7
+            list_grads = [[512, 7], [7], [512, 1], [1]]
+        else:
+            raise NotImplementedError()
+
+        # self.max_iter gives us max_iter in terms of policy+representation learning
+        ###
+        ### ADD THOSE TO CONFIG
+        # gradpred_init_iter, gradpred_inter, max_temp, min_temp -> MUST GO TO CONFIG
+        ### DO NOT FORGET
+        ###
+
+        with tf.variable_scope('predictor', reuse=False):
+            self.gradpred_init_iter = 5000
+            self.gradpred_inter = 1500
+
+            # i want to reach to the final temperature before the last update
+            max_iter = (self.max_iter - self.gradpred_init_iter) // self.gradpred_inter
+            self.predictor = GradPredictor(cap_buf=args['cap_buf'],
+                                           list_grads=list_grads,
+                                           context_dim=args['context_dim'],
+                                           min_temp=0.6,
+                                           max_iter=max_iter,
+                                           max_pos=max_pos,
+                                           max_history=max_history,
+                                           policy_context=self.policy.policy_context,
+                                           csv_path=os.path.join(args['log_dir'], 'grad_predictor.csv'))
+
+        # get ob_space from self.policy
+        self.agent = PPO(scope='ppo',
+                         env=self.env,
+                         nenvs=args['NUM_ENVS'],
+                         save_dir=args['save_dir'],
+                         log_dir=args['log_dir'],
+                         policy=self.policy,
+                         use_news=args['use_news'],
+                         recurrent=args['recurrent'],
+                         gamma=args['gamma'],
+                         lam=args["lambda"],
+                         nepochs=args['nepochs'],
+                         nminibatches=args['nminibatches'],
+                         max_grad_norm=args['max_grad_norm'],
+                         nsteps=args['nsteps'],
+                         vf_coef=args['vf_coef'],
+                         ent_coef=args['ent_coeff'],
+                         normrew=args['norm_rew'],
+                         cliprew=args['clip_rew'],
+                         normadv=args['norm_adv'],
+                         jacobian_loss=args['jacobian_loss'],
+                         nparticles=nparticles,
+                         entity_loss=args['entity_loss'],
+                         entity_randomness=args['entity_randomness'],
+                         nentities_per_batch=nentities_per_batch,
+                         num_traj_rep=args['num_traj_rep'],
+                         list_grads=list_grads,
+                         cap_buf=args['cap_buf'],
+                         context_dim=args['context_dim'],
+                         predictor=self.predictor,
+                         max_keep_prob=max_keep_prob,
+                         max_history=max_history,
+                         max_get=max_get,
+                         update_freq=args['update_freq'])
+
+    def _load_mean_std(self, load_path_pkl):
+        with open(load_path_pkl, 'rb') as file_:
+            data = cloudpickle.load(file_)
+        self.ob_mean, self.ob_std = data['ob_mean'], data['ob_std']
+
+    def _set_env_vars(self):
+        # set observation_space, action_space
+        self.ob_space, self.ac_space = self.env.observation_space, self.env.action_space
+
+        self.ob_mean, self.ob_std = 0.0, 1.0
+
+        if self.args['norm_obs']:        
+            if self.args['evaluation']:
+                load_path = self.args['load_path'][0].split('/')[:-1]
+                load_path = '/'.join(load_path)
+                load_path_pkl = os.path.join(load_path, 'mean_std.pkl')
+                self._load_mean_std(load_path_pkl)
+            else:
+                save_path_pkl = os.path.join(self.args['save_dir'], 'mean_std.pkl')
+                if self.args['restore_iter']:
+                    self._load_mean_std(save_path_pkl)
+                    # print('restore mean and std from: {}'.format(save_path_pkl))
+
+                else:
+                    self.ob_mean, self.ob_std = utils.random_agent_mean_std(env=self.env)
+                    with open(save_path_pkl, 'wb') as file_:
+                        data = {'ob_mean': self.ob_mean,
+                                'ob_std': self.ob_std}
+                        cloudpickle.dump(data, file_)
+
+        # october 30, 2019
+        # we moved mean and std for observation to agent
+        # not sure if coinrun normalizes observations, will be checked
+        # october 31, 2019
+        # coinrun DOES NOT normalize observations with running mean and std
+        # only scales dividing by 255. (already done)
+
+    def train(self):
+        curr_iter = 0
+
+        # train progress results logger
+        format_strs = ['csv']
+        format_strs = filter(None, format_strs)
+        dirc = os.path.join(self.args['log_dir'], 'inter')
+        output_formats = [logger.make_output_format(f, dirc) for f in format_strs]
+        self.result_logger = logger.Logger(dir=dirc, output_formats=output_formats)
+
+        # in case we are restoring the training
+        restore_iter = self.args['restore_iter']
+        if restore_iter:
+            load_path = os.path.join(self.args['save_dir'], 'model-{}'.format(restore_iter))
+            self.agent.load(load_path)
+            curr_iter = restore_iter
+
+            # i also need to restore the buf_contexts, buf_grads, predictor stats
+            extra_load_path = os.path.join(self.args['save_dir'], 'extras-{}.npz'.format(restore_iter))
+            loaded = np.load(extra_load_path)
+            self.agent.buf_grads = [[], [], loaded['grads'].tolist()]
+            self.agent.buf_contexts = [[], [], loaded['contexts'].tolist()]
+
+            self.predictor.c_mean = loaded['c_mean']
+            self.predictor.c_std = loaded['c_std']
+            self.predictor.g_mean = loaded['g_mean']
+            self.predictor.g_std = loaded['g_std']
+
+        print('max_iter: {}'.format(self.max_iter))
+
+        # interim saves to compare in the future
+        # for 128M frames, 
+        inter_save1 = int(self.args['num_timesteps'] // 8) // (self.args['nsteps'] * self.args['NUM_ENVS'] * self.args['nframeskip'])
+        inter_save2 = int(self.args['num_timesteps'] // 4) // (self.args['nsteps'] * self.args['NUM_ENVS'] * self.args['nframeskip'])
+        inter_save3 = int(self.args['num_timesteps'] // 2) // (self.args['nsteps'] * self.args['NUM_ENVS'] * self.args['nframeskip'])
+
+        print('inter_saves: {}, {}, {}'.format(inter_save1, inter_save2, inter_save3))
+
+        total_time = 0.0
+        # results_list = []
+        while curr_iter < self.max_iter:
+            frac = 1.0 - (float(curr_iter) / self.max_iter)
+
+            # self.agent.update calls rollout
+            start_time = time.time()
+
+            ## linearly annealing
+            curr_lr = self.lr(frac)
+            curr_cr = self.cliprange(frac)
+            
+            # linear annealing ???
+            curr_beta_jc = self.beta_jacobian_loss(1.0 - frac)
+            curr_tol_jc = self.tol_jacobian_loss(1.0 - frac)
+
+            # linearly increasing penalty
+            curr_beta_entity = self.beta_entity_loss(1.0 - frac)
+            
+            # CHANGED TO TEST
+            # rep_train = ((curr_iter + 1) % 5 == 0)
+
+            rep_train = ((curr_iter + 1) % self.gradpred_inter == 0) if (curr_iter > self.gradpred_init_iter) else ((curr_iter + 1) % self.gradpred_init_iter == 0)
+            
+            info = self.agent.update(rep_train=rep_train, curr_iter=curr_iter, lr=curr_lr, cliprange=curr_cr, 
+                                     beta_jacobian_loss=curr_beta_jc, tol_jacobian_loss=curr_tol_jc, 
+                                     beta_entity_loss=curr_beta_entity)
+            end_time = time.time()
+
+            # additional info
+            info['frac'] = frac
+            info['curr_lr'] = curr_lr
+            info['curr_cr'] = curr_cr
+            info['curr_iter'] = curr_iter
+            # info['max_iter'] = self.max_iter
+            info['elapsed_time'] = end_time - start_time
+            # info['total_time'] = total_time = (total_time + info['elapsed_time']) / 3600.0
+            info['expected_time'] = self.max_iter * info['elapsed_time'] / 3600.0
+
+            ## logging results using baselines's logger
+            logger.logkvs(info)
+            logger.dumpkvs()
+
+            ## removed within training evaluation
+            ## i could not make flag_sum to work properly
+            ## evaluate each 100 run for 20 training levels
+            # only for mario
+            if self.args['env_kind'] == 'mario':
+                if curr_iter % 100 == 0:
+                    save_video = False
+                    nlevels = 20
+                    results, _ = self.agent.evaluate(nlevels, save_video)
+                    results['iter'] = curr_iter
+                    for (k, v) in results.items():
+                        self.result_logger.logkv(k, v)
+                    self.result_logger.dumpkvs()
+                    # results_list.append(results)
+
+            # print('elapsed time: {}'.format(elapsed_time))
+            # print('expected hours to complete experiment: {}'.format(elapsed_time * self.max_iter / 3600.0))
+
+            if curr_iter % self.args['save_interval'] == 0:
+                self.agent.save(curr_iter)
+
+            if curr_iter == inter_save1 or curr_iter == inter_save2 or curr_iter == inter_save3:
+                self.agent.save(curr_iter)
+
+            curr_iter += 1
+
+        self.agent.save(curr_iter)
+
+        '''
+        csv_columns = results_list[0].keys()
+        csv_save_path = os.path.join(self.args['log_dir'], '{}-inters.csv'.format(self.args['exp_name']))
+        with open(csv_save_path, 'w') as file:
+            writer = csv.DictWriter(file, fieldnames=csv_columns)
+            writer.writeheader()
+            for data in results_list:
+                writer.writerow(data)
+        print('results are dumped to {}'.format(csv_save_path))
+        '''
+
+    def eval(self):
+        # create base_dir to save results
+        env_id = self.args['env_id'] if self.args['env_kind'] == 'mario' else self.args['eval_type']
+        base_dir =  os.path.join(self.args['log_dir'], self.args['exp_name'], env_id)
+
+        os.makedirs(base_dir, exist_ok=True)
+
+        # i forget to restore, i cannot believe myself
+        load_path = self.args['load_path']
+
+        # args['IS_HIGH_RES'] is used to signal whether save videos
+        nlevels =  self.args['NUM_LEVELS']
+
+        save_video = False
+        
+        if self.args['env_kind'] == 'mario':
+            # do NOT FORGET to change this
+            nlevels = 20
+
+        curr_iter = 0
+        results_list = []
+        for l in load_path:
+            self.agent.load(l)
+            
+            if l == load_path[-1]:
+                # print('saving video for the final run')
+                save_video = False
+
+            results, eval_imgs = self.agent.evaluate(nlevels, save_video)
+            results['iter'] = curr_iter = int(l.split('/')[-1].split('-')[-1])
+            print(results)
+            results_list.append(results)
+
+        csv_columns = results_list[0].keys()
+        print(csv_columns)
+
+        curr_dir = os.path.join(base_dir, str(curr_iter))
+        os.makedirs(curr_dir, exist_ok=True)
+        
+        csv_save_path = os.path.join(curr_dir, 'results.csv'.format())
+        with open(csv_save_path, 'w') as file:
+            writer = csv.DictWriter(file, fieldnames=csv_columns)
+            writer.writeheader()
+            for data in results_list:
+                writer.writerow(data)
+        print('results are dumped to {}'.format(csv_save_path))
+
+        '''
+        # saving video
+        print('beginning saving video...')
+        # maximum number of saved videos
+        # max_eval_imgs = 5
+        # print(len(eval_imgs))
+        # eval_imgs = eval_imgs[:max_eval_imgs]
+        # print(len(eval_imgs), len(eval_imgs[0]))
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        h, w = eval_imgs[0][0].shape[1], eval_imgs[0][0].shape[0]
+        outs = [cv2.VideoWriter(os.path.join(curr_dir, 'rlvideo-{}.avi'.format(i)), 
+                                fourcc, 20.0, (h, w)) for i in range(len(eval_imgs))]
+        for ix, episode in enumerate(eval_imgs):
+            for frame in episode:
+                frame = cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
+                outs[ix].write(frame)
+
+        for out in outs:
+            out.release()
+        '''
+
+###
+# MAIN
+###
+if __name__ == '__main__':
+    import argparse
+
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+
+    parser.add_argument('--model_spec', type=str, default='')
+    parser.add_argument('--restore_iter', type=int, default=0)
+    parser.add_argument('--server_type', type=str, default='local')
+    args = parser.parse_args()
+
+    with open(args.model_spec, 'r') as file:
+        print('loading configuration variables from: {}'.format(args.model_spec))
+        train_args = json.load(file)
+
+    # only create log_dir and save_dir for the experiment
+    # IF YOU ARE RUNNING THE F*CKING EXPERIMENT!!!
+    os.makedirs(train_args['log_dir'], exist_ok=True)
+    os.makedirs(train_args['save_dir'], exist_ok=True)
+
+    train_args['restore_iter'] = args.restore_iter
+    train_args['server_type'] = args.server_type
+    start_experiment(**train_args)
