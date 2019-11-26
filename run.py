@@ -146,7 +146,8 @@ class Trainer(object):
                              num_repeat=args['num_repeat'],
                              num_replace_ratio=args['num_replace_ratio'],
                              add_noise=args['add_noise'],
-                             keep_noise=args['keep_noise'])
+                             keep_noise=args['keep_noise'],
+                             noise_std=args['noise_std'])
 
         # cliprange will be annealed (was 0.1 for mario experiments)
         

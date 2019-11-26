@@ -18,7 +18,7 @@ class Policy(object):
                  entity_loss, tol_entity_loss, nentities_per_state, nentities_per_batch,
                  entity_randomness,
                  num_repeat, num_replace_ratio,
-                 add_noise, keep_noise,
+                 add_noise, keep_noise, noise_std,
                  vf_coef, coinrun):
         
         # warnings
@@ -70,6 +70,7 @@ class Policy(object):
 
         self.add_noise = add_noise
         self.keep_noise = keep_noise
+        self.noise_std = noise_std
 
         self.layernormalize = layernormalize
         self.batchnormalize = batchnormalize
@@ -268,7 +269,7 @@ class Policy(object):
 
                 ''')
             x, random_idx, full_dim = utils.feat_v1(out=x, feat_dim=self.feat_dim, activation=self.activation, add_noise=self.add_noise, keep_dim=self.keep_dim,
-                                                    keep_noise=self.keep_noise)
+                                                    keep_noise=self.keep_noise, noise_std=self.noise_std)
             
             # we will use those idx to mask the gradients of not-selected indices as well as 
             # inject some noise

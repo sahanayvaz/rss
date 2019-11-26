@@ -103,7 +103,7 @@ def feat_v0(out, feat_dim, activation):
 
 # i want to make this (sparse and skipped)
 # we will train this without adding any noise
-def feat_v1(out, feat_dim, activation,keep_dim, add_noise=False, keep_noise=0, num_layers=2):
+def feat_v1(out, feat_dim, activation,keep_dim, add_noise=False, keep_noise=0, num_layers=2, noise_std=1.0):
     in_feat_dim = out.shape[-1]
     print('in_feat_dim: {}'.format(in_feat_dim))
     
@@ -139,7 +139,7 @@ def feat_v1(out, feat_dim, activation,keep_dim, add_noise=False, keep_noise=0, n
         # do not forget to cancel them out
         random_w = tf.random.normal(shape=[keep_noise * feat_dim],
                                     mean=0.0,
-                                    stddev=1.0,
+                                    stddev=noise_std,
                                     name='random_1')
         sparse_r_weights = tf.SparseTensor(indices=random_w_idx, values=random_w, dense_shape=(in_feat_dim, feat_dim))
         dense_r_weights = tf.sparse.to_dense(sparse_r_weights, default_value=0.0, validate_indices=False)
@@ -182,7 +182,7 @@ def feat_v1(out, feat_dim, activation,keep_dim, add_noise=False, keep_noise=0, n
         # do not forget to cancel them out
         random_w = tf.random.normal(shape=[(keep_noise // 2) * feat_dim],
                                     mean=0.0,
-                                    stddev=1.0,
+                                    stddev=noise_std,
                                     name='random_2')
         sparse_r_weights = tf.SparseTensor(indices=random_w_idx, values=random_w, dense_shape=(in_feat_dim, feat_dim))
         dense_r_weights = tf.sparse.to_dense(sparse_r_weights, default_value=0.0, validate_indices=False)
@@ -222,7 +222,7 @@ def feat_v1(out, feat_dim, activation,keep_dim, add_noise=False, keep_noise=0, n
         # do not forget to cancel them out
         random_w = tf.random.normal(shape=[(keep_noise // 2) * feat_dim],
                                     mean=0.0,
-                                    stddev=1.0,
+                                    stddev=noise_std,
                                     name='random_3')
         sparse_r_weights = tf.SparseTensor(indices=random_w_idx, values=random_w, dense_shape=(feat_dim, feat_dim))
         dense_r_weights = tf.sparse.to_dense(sparse_r_weights, default_value=0.0, validate_indices=False)

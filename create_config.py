@@ -102,6 +102,7 @@ def add_network_params(parser):
 
     parser.add_argument('--add_noise', type=int, default=0)
     parser.add_argument('--keep_noise', type=int, default=0)
+    parser.add_argument('--noise_std', type=float, default=1.0)
     
 def add_saver_loger_params(parser):
     # saver_loger params
