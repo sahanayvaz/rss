@@ -22,6 +22,10 @@ import cv2
 import time
 import matplotlib.pyplot as plt
 
+import warnings
+
+warnings.filterwarnings('ignore')
+
 def start_experiment(**args):
     # create environment
     # coinrun environment is already vectorized
