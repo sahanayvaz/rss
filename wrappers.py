@@ -108,7 +108,8 @@ def make_mario_env(env_id, frameskip, rank, seed=0):
         return env
     return __init
 
-def make_mario_vec_env(env_id, nenvs, frameskip):
+def make_mario_vec_env(env_id, nenvs, frameskip, start_method):
     from stable_baselines.common.vec_env import SubprocVecEnv
-    env = SubprocVecEnv([make_mario_env(env_id, frameskip, i)  for i in range(nenvs)])
+    env = SubprocVecEnv(env_fns=[make_mario_env(env_id, frameskip, i)  for i in range(nenvs)],
+                        start_method=start_method)
     return env

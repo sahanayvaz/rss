@@ -65,12 +65,17 @@ def make_env_all_params(args):
 
     elif args['env_kind'] == 'mario':
         if args['input_shape'] == '84x84':
+            start_method = 'forkserver'
+            if args['server_type'] == 'LEONHARD':
+                start_method = 'spawn'
             env = make_mario_vec_env(nenvs=args['NUM_ENVS'],
                                      env_id=args['env_id'],
-                                     frameskip=args['nframeskip'])
+                                     frameskip=args['nframeskip'],
+                                     start_method=start_method)
             test_env = make_mario_vec_env(nenvs=args['NUM_ENVS'],
                                      env_id=args['test_id'],
-                                     frameskip=args['nframeskip'])
+                                     frameskip=args['nframeskip'],
+                                     start_method=start_method)
         else:
             raise NotImplementedError()
 
