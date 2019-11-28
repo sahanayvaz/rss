@@ -242,16 +242,19 @@ def rss(out, feat_dim, activation, keep_dim, add_noise=False, keep_noise=0, num_
 
 # i want to make this (sparse and skipped)
 # we will train this without adding any noise
-def feat_rss_v0(out, feat_dim, activation,keep_dim, add_noise=False, keep_noise=0, num_layers=2, noise_std=1.0,
+def feat_rss_v0(out, feat_dim, activation, keep_dim, add_noise=False, keep_noise=0, num_layers=2, noise_std=1.0,
                 transfer_load=False):
-    outs, random_idx, full_dim = rss(out=out, feat_dim=feat_dim, activation=activation, keep_dim=keep_dim, 
-                                     add_noise=False, keep_noise=0, num_layers=2, noise_std=1.0, name_add='')
+    outs, train_random_idx, train_full_dim = rss(out=out, feat_dim=feat_dim, activation=activation, keep_dim=keep_dim, 
+                                                 add_noise=add_noise, keep_noise=keep_noise, num_layers=2, noise_std=noise_std, name_add='')
+
+    random_idx = {'train_random_idx': train_random_idx}
+    full_dim = {'train_full_dim': train_full_dim}
 
     if transfer_load:
-        outs, random_idx, full_dim = rss(out=out, feat_dim=feat_dim, activation=activation, keep_dim=2 * keep_dim, 
-                                         add_noise=False, keep_noise=0, num_layers=2, noise_std=1.0, name_add='_transfer')
-
-    # print('sum_diff of r_1 and r_2: {}'.format(np.sum(r_2 - r_1)))
+        outs, trans_random_idx, trans_full_dim = rss(out=out, feat_dim=feat_dim, activation=activation, keep_dim=2 * keep_dim, 
+                                                     add_noise=add_noise, keep_noise=keep_noise, num_layers=2, noise_std=noise_std, name_add='_transfer')
+        random_idx['trans_random_idx'] = trans_random_idx
+        full_dim['trans_full_dim'] = trans_full_dim
 
     return outs, random_idx, full_dim
 

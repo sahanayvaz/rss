@@ -36,9 +36,10 @@ class PPO(object):
         self.freeze_weights = freeze_weights
 
         # save the random_idx of the random connections for the future
+        # this is only to check that the same connections are established
         if policy.random_idx is not None:
-            random_idx = np.asarray(policy.random_idx)
-            npz_path = os.path.join(self.save_dir, 'random_idx.npz')
+            random_idx = np.asarray(policy.random_idx_dict['train_random_idx'])
+            npz_path = os.path.join(self.save_dir, 'train_random_idx.npz')
             np.savez_compressed(npz_path,
                                 random_idx=random_idx)
 

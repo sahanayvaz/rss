@@ -279,8 +279,16 @@ class Policy(object):
                 
                 # we will use those idx to mask the gradients of not-selected indices as well as 
                 # inject some noise
-                self.random_idx = random_idx
-                self.full_dim = full_dim
+
+                self.random_idx = random_idx['train_random_idx']
+                self.full_dim = full_dim['train_full_dim']
+                
+                if self.transfer_load:
+                    self.random_idx = random_idx['trans_random_idx']
+                    self.full_dim = full_dim['trans_full_dim']
+
+                self.random_idx_dict = random_idx
+                
         return x
 
     def get_policy(self, x, reuse):
