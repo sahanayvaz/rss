@@ -202,17 +202,32 @@ class PPO(object):
                 end_idx = -6
             elif self.policy.policy_spec == 'cr_fc_v0':
                 end_idx = -4
+            elif self.policy.policy_spec == 'full_sparse':
+                end_idx = None
+                special_idx = -16
             else:
                 raise NotImplementedError()
             
-            start_idx = end_idx - (self.policy.num_layers * 2)
-                for i, g in enumerate(grads[start_idx:end_idx]):
-                    print('g: {}'.format(g))
-                    sparse_idx = self.policy.random_idx[i]
-                    full_dim = self.policy.full_dim[i]
-                    mult_conts = np.zeros(full_dim, dtype=np.float32)
-                    mult_conts[sparse_idx] = 1.0
-                    g = tf.multiply(g, tf.convert_to_tensor(mult_conts))
+            sum_get = [(i+1) for i in range(self.policy.num_layers)]
+            mult = np.sum(sum_get)
+            start_idx = end_idx - (mult * 2) if end_idx is not None else special_idx
+
+            print('start_idx: {} and end_idx: {}'.format(start_idx, end_idx))
+            for g in grads:
+                print(g)
+
+            print('''
+
+
+                ''')
+
+            for i, g in enumerate(grads[start_idx:]):
+                print('g: {}'.format(g))
+                sparse_idx = self.policy.random_idx[i]
+                full_dim = self.policy.full_dim[i]
+                mult_conts = np.zeros(full_dim, dtype=np.float32)
+                mult_conts[sparse_idx] = 1.0
+                g = tf.multiply(g, tf.convert_to_tensor(mult_conts))
             
         if self.max_grad_norm is not None:
             grads, _grad_norm = tf.clip_by_global_norm(grads, self.max_grad_norm)

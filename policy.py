@@ -62,7 +62,7 @@ class Policy(object):
                 ''')
         self.transfer_load = transfer_load
         self.num_layers = num_layers
-        
+
         self.coinrun = coinrun
         self.num_repeat = int(num_repeat)
         self.num_replace_ratio = int(num_replace_ratio)
@@ -292,6 +292,8 @@ class Policy(object):
                     self.full_dim = full_dim['trans_full_dim']
 
                 self.random_idx_dict = random_idx
+            else:
+                raise NotImplementedError('not implemented method in get_features...')
 
         return x
 
@@ -311,9 +313,49 @@ class Policy(object):
                 x = utils.ls_c_v1(x, ncat=self.pdparamsize, activation=self.activation, nentities=self.nentities_per_state)
             elif self.policy_spec == 'ls_c_hh':
                 x = utils.ls_c_hh(x, ncat=self.pdparamsize, activation=self.activation, nentities=self.nentities_per_state)
+            elif self.policy_spec == 'full_sparse':
+                print('''
 
+                    WE ARE FULL_SPARSE...
+
+                    ''')
+                keep_dim = 120
+                x_pol, random_idx_pol, full_dim_pol = utils.feat_rss_v0(out=x, feat_dim=self.pdparamsize, activation=None, 
+                                                                        add_noise=self.add_noise, keep_dim=keep_dim,
+                                                                        keep_noise=self.keep_noise, noise_std=self.noise_std,
+                                                                        num_layers=1, base_name='policy',
+                                                                        transfer_load=self.transfer_load)
+                
+                x_val, random_idx_val, full_dim_val = utils.feat_rss_v0(out=x, feat_dim=1, activation=None, 
+                                                                        add_noise=self.add_noise, keep_dim=keep_dim,
+                                                                        keep_noise=self.keep_noise, noise_std=self.noise_std,
+                                                                        num_layers=1, base_name='value',
+                                                                        transfer_load=self.transfer_load)
+
+
+                x = (x_pol, tf.squeeze(x_val))
+                
+                # we will use those idx to mask the gradients of not-selected indices as well as 
+                # inject some noise
+                if not self.transfer_load:
+                    self.random_idx += random_idx_pol['train_random_idx']
+                    self.random_idx += random_idx_val['train_random_idx']
+
+                    self.full_dim += full_dim_pol['train_full_dim']
+                    self.full_dim += full_dim_val['train_full_dim']
+                else:
+                    self.random_idx += random_idx_pol['trans_random_idx']
+                    self.random_idx += random_idx_val['trans_random_idx']
+
+                    self.full_dim += full_dim_pol['trans_full_dim']
+                    self.full_dim += full_dim_val['trans_full_dim']
+
+                # this is only to check for random idx between train and transfer
+                self.random_idx_dict['train_random_idx'] += random_idx_pol['train_random_idx'] + random_idx_val['train_random_idx']
+                
             else:
-                raise NotImplementedError('only cr_fc_v0 or ls_c_v0 policies are allowed')
+                raise NotImplementedError('only some types policies are allowed')
+
         pdparam, vpred = x[0], x[1]
         return pdparam, vpred
 

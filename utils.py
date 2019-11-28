@@ -102,7 +102,7 @@ def feat_v0(out, feat_dim, activation):
     return out
 
 def single_rss(inpt, feat_dim, activation, keep_dim, add_noise=False, keep_noise=0, 
-               num_layers=2, noise_std=1.0, layer_name='', transfer_name=''):
+               num_layers=2, noise_std=1.0, layer_name='', base_name='', transfer_name=''):
     in_feat_dim = inpt.shape[-1]
     print('in_feat_dim: {}'.format(in_feat_dim))
 
@@ -123,9 +123,9 @@ def single_rss(inpt, feat_dim, activation, keep_dim, add_noise=False, keep_noise
 
     dense_weights = tf.sparse.to_dense(sparse_weights, default_value=0.0, validate_indices=False)
 
-    weights = tf.Variable(dense_weights, trainable=True, dtype=tf.float32, name='feat_v1_weights_{}{}'.format(layer_name, transfer_name))
+    weights = tf.Variable(dense_weights, trainable=True, dtype=tf.float32, name='{}_weights_{}{}'.format(base_name, layer_name, transfer_name))
     bias_initializer = tf.constant_initializer(0.0)(shape=(feat_dim,))
-    biases = tf.Variable(initial_value=bias_initializer, trainable=True, dtype=tf.float32, name='feat_v1_biases_{}{}'.format(layer_name, transfer_name))
+    biases = tf.Variable(initial_value=bias_initializer, trainable=True, dtype=tf.float32, name='{}_biases_{}{}'.format(base_name, layer_name, transfer_name))
 
     # poor man's added noise
     # this should not be like that, we should be changing the connections
@@ -142,7 +142,7 @@ def single_rss(inpt, feat_dim, activation, keep_dim, add_noise=False, keep_noise
         random_w = tf.random.normal(shape=[(keep_noise) * feat_dim],
                                     mean=0.0,
                                     stddev=noise_std,
-                                    name='random_{}{}'.format(layer_name, transfer_name))
+                                    name='random_{}_{}{}'.format(base_name, layer_name, transfer_name))
 
         sparse_r_weights = tf.SparseTensor(indices=random_w_idx, values=random_w, dense_shape=(in_feat_dim, feat_dim))
         dense_r_weights = tf.sparse.to_dense(sparse_r_weights, default_value=0.0, validate_indices=False)
@@ -155,188 +155,61 @@ def single_rss(inpt, feat_dim, activation, keep_dim, add_noise=False, keep_noise
 
     return out, random_idx, full_dim
 
-def rss(inpt, feat_dim, activation, keep_dim, add_noise=False, keep_noise=0, 
-        num_layers=2, noise_std=1.0, transfer_name=''):
+def rss(inpt, feat_dim, activation, keep_dim, num_layers, add_noise=False, keep_noise=0, 
+        noise_std=1.0, base_name='feat_v1', transfer_name=''):
     
     outs = [inpt]
     random_idx = []
-    full_dims =
+    full_dims = []
     for n in range(num_layers):
-        for n_sub in range(n):
+        inter_out = 0.0
+        for n_sub in range(n+1):
             # for backward comp
             if n == 0:
                 layer_name = '{}'.format((n+1))
             else:
                 layer_name = '{}-{}'.format((n+1), (n_sub+1))
 
-            divisor = (n_sub + 1)
-            out, r_idx, f_dim = single_rss(inpt=outs[n], feat_dim=feat_dim // divisor, activation=activation, 
+            divisor = (n + 1)
+            out, r_idx, f_dim = single_rss(inpt=outs[n_sub], feat_dim=feat_dim, activation=activation, 
                                            keep_dim=keep_dim // divisor, add_noise=add_noise, 
                                            keep_noise=keep_noise // divisor, noise_std=noise_std,
-                                           layer_name=layer_name, transfer_name=transfer_name)
-            outs.append(out)
+                                           layer_name=layer_name, base_name=base_name, 
+                                           transfer_name=transfer_name)
+            inter_out = tf.add(inter_out, out)
             random_idx += r_idx
             full_dims += f_dim
+        outs.append(inter_out)
+        print(outs)
 
-    r_outs = outs[-num_layers:]
+    print('''
 
-    return tf.add_n(r_outs), random_idx, full_dim
+        outs for {}
 
-    '''
-    in_feat_dim = out.shape[-1]
-    print('in_feat_dim: {}'.format(in_feat_dim))
-    
-    random_idx = []
-    # really unoptimized, will work on it LATER
-    random_idx_1 = []
-    for i in range(feat_dim):
-        r_id = np.random.choice(in_feat_dim, keep_dim, replace=False)
-        for r in r_id:
-            random_idx_1.append([r, i])
+        '''.format(base_name))
 
-    weight_initializer = tf.initializers.orthogonal(1.0)(shape=(keep_dim, feat_dim))
-    weight_init = tf.reshape(weight_initializer, [keep_dim * feat_dim])
-    # sparse_weights = tf.Variable(initial_value=weight_initializer, trainable=True, dtype=tf.float32, name='sparse_weights')
-    print('building sparse_tensor...')
-    sparse_weights = tf.SparseTensor(indices=random_idx_1, values=weight_init, dense_shape=(in_feat_dim, feat_dim))
-    print('success...')
+    for o in outs:
+        print(o, o.shape)
 
-    dense_weights = tf.sparse.to_dense(sparse_weights, default_value=0.0, validate_indices=False)
+    r_outs = outs[-1]
 
-    weights = tf.Variable(dense_weights, trainable=True, dtype=tf.float32, name='feat_v1_weights{}'.format(name_add))
-    bias_initializer = tf.constant_initializer(0.0)(shape=(feat_dim,))
-    biases = tf.Variable(initial_value=bias_initializer, trainable=True, dtype=tf.float32, name='feat_v1_biases{}'.format(name_add))
-
-    if add_noise:
-        # get random weights
-        random_w_idx = []
-        for i in range(feat_dim):
-            r_id = np.random.choice(in_feat_dim, keep_noise, replace=False)
-            for r in r_id:
-                random_w_idx.append([r, i])
-
-        # do not forget to cancel them out
-        random_w = tf.random.normal(shape=[keep_noise * feat_dim],
-                                    mean=0.0,
-                                    stddev=noise_std,
-                                    name='random_1{}'.format(name_add))
-        sparse_r_weights = tf.SparseTensor(indices=random_w_idx, values=random_w, dense_shape=(in_feat_dim, feat_dim))
-        dense_r_weights = tf.sparse.to_dense(sparse_r_weights, default_value=0.0, validate_indices=False)
-        weights = weights + dense_r_weights
-
-    out_1 = tf.add(tf.matmul(out, weights), biases)
-
-    # really unoptimized, will work on it LATER
-    random_idx_2_1 = []
-
-    for i in range(feat_dim):
-        r_id = np.random.choice(in_feat_dim, keep_dim // 2, replace=False)
-        for r in r_id:
-            random_idx_2_1.append([r, i])
-
-    weight_initializer = tf.initializers.orthogonal(1.0)(shape=(keep_dim // 2, feat_dim))
-    weight_init = tf.reshape(weight_initializer, [(keep_dim // 2) * feat_dim])
-    # sparse_weights = tf.Variable(initial_value=weight_initializer, trainable=True, dtype=tf.float32, name='sparse_weights')
-    print('building sparse_tensor...')
-    sparse_weights = tf.SparseTensor(indices=random_idx_2_1, values=weight_init, dense_shape=(in_feat_dim, feat_dim))
-    print('success...')
-
-    dense_weights = tf.sparse.to_dense(sparse_weights, default_value=0.0, validate_indices=False)
-
-    weights_2_1 = tf.Variable(dense_weights, trainable=True, dtype=tf.float32, name='feat_v1_weights_2_1{}'.format(name_add))
-    bias_initializer = tf.constant_initializer(0.0)(shape=(feat_dim,))
-    biases_2_1 = tf.Variable(initial_value=bias_initializer, trainable=True, dtype=tf.float32, name='feat_v1_biases_2_1{}'.format(name_add))
-
-    # poor man's added noise
-    # this should not be like that, we should be changing the connections
-    # let's try this first
-    if add_noise:
-        # get random weights
-        random_w_idx = []
-        for i in range(feat_dim):
-            r_id = np.random.choice(in_feat_dim, keep_noise // 2, replace=False)
-            for r in r_id:
-                random_w_idx.append([r, i])
-
-        # do not forget to cancel them out
-        random_w = tf.random.normal(shape=[(keep_noise // 2) * feat_dim],
-                                    mean=0.0,
-                                    stddev=noise_std,
-                                    name='random_2{}'.format(name_add))
-        sparse_r_weights = tf.SparseTensor(indices=random_w_idx, values=random_w, dense_shape=(in_feat_dim, feat_dim))
-        dense_r_weights = tf.sparse.to_dense(sparse_r_weights, default_value=0.0, validate_indices=False)
-        weights_2_1 = weights_2_1 + dense_r_weights
-
-    out_2_1 = tf.add(tf.matmul(out, weights_2_1), biases_2_1)
-
-    # really unoptimized, will work on it LATER
-    random_idx_2 = []
-
-    for i in range(feat_dim):
-        r_id = np.random.choice(feat_dim, keep_dim // 2, replace=False)
-        for r in r_id:
-            random_idx_2.append([r, i])
-
-    weight_initializer = tf.initializers.orthogonal(1.0)(shape=(keep_dim // 2, feat_dim))
-    weight_init = tf.reshape(weight_initializer, [(keep_dim // 2) * feat_dim])
-    # sparse_weights = tf.Variable(initial_value=weight_initializer, trainable=True, dtype=tf.float32, name='sparse_weights')
-    print('building sparse_tensor...')
-    sparse_weights = tf.SparseTensor(indices=random_idx_2, values=weight_init, dense_shape=(feat_dim, feat_dim))
-    print('success...')
-
-    dense_weights = tf.sparse.to_dense(sparse_weights, default_value=0.0, validate_indices=False)
-
-    weights_2 = tf.Variable(dense_weights, trainable=True, dtype=tf.float32, name='feat_v1_weights_2{}'.format(name_add))
-    bias_initializer = tf.constant_initializer(0.0)(shape=(feat_dim,))
-    biases_2 = tf.Variable(initial_value=bias_initializer, trainable=True, dtype=tf.float32, name='feat_v1_biases_2{}'.format(name_add))
-
-    if add_noise:
-        # get random weights
-        random_w_idx = []
-        for i in range(feat_dim):
-            r_id = np.random.choice(feat_dim, keep_noise // 2, replace=False)
-            for r in r_id:
-                random_w_idx.append([r, i])
-
-        # do not forget to cancel them out
-        random_w = tf.random.normal(shape=[(keep_noise // 2) * feat_dim],
-                                    mean=0.0,
-                                    stddev=noise_std,
-                                    name='random_3{}'.format(name_add))
-        sparse_r_weights = tf.SparseTensor(indices=random_w_idx, values=random_w, dense_shape=(feat_dim, feat_dim))
-        dense_r_weights = tf.sparse.to_dense(sparse_r_weights, default_value=0.0, validate_indices=False)
-        weights_2 = weights_2 + dense_r_weights
-
-    out_2 = tf.add(tf.matmul(out_1, weights_2), biases_2)
-    print('out_2.shape: {}'.format(out_2.shape))
-    
-    # we always add bias
-    random_idx = [random_idx_1, feat_dim-1, random_idx_2_1, feat_dim-1, random_idx_2, feat_dim-1]
-    for r in random_idx:
-        print(np.asarray(r).shape)
-
-    full_dim = [(in_feat_dim, feat_dim), (feat_dim,), 
-                (in_feat_dim, feat_dim), (feat_dim,), 
-                (feat_dim, feat_dim), (feat_dim,)]
-
-    if num_layers > 2:
-    '''
-
-    # return out_2 + out_2_1, random_idx, full_dim
+    return r_outs, random_idx, full_dims
 
 # i want to make this (sparse and skipped)
 # we will train this without adding any noise
 def feat_rss_v0(out, feat_dim, activation, keep_dim, add_noise=False, keep_noise=0, num_layers=2, noise_std=1.0,
-                transfer_load=False):
-    outs, train_random_idx, train_full_dim = rss(out=out, feat_dim=feat_dim, activation=activation, keep_dim=keep_dim, 
-                                                 add_noise=add_noise, keep_noise=keep_noise, num_layers=2, noise_std=noise_std, name_add='')
+                transfer_load=False, base_name='feat_v1'):
+    outs, train_random_idx, train_full_dim = rss(inpt=out, feat_dim=feat_dim, activation=activation, keep_dim=keep_dim, 
+                                                 add_noise=add_noise, keep_noise=keep_noise, num_layers=num_layers, noise_std=noise_std, 
+                                                 base_name=base_name, transfer_name='')
 
     random_idx = {'train_random_idx': train_random_idx}
     full_dim = {'train_full_dim': train_full_dim}
 
     if transfer_load:
-        outs, trans_random_idx, trans_full_dim = rss(out=out, feat_dim=feat_dim, activation=activation, keep_dim=2 * keep_dim, 
-                                                     add_noise=add_noise, keep_noise=keep_noise, num_layers=2, noise_std=noise_std, name_add='_transfer')
+        outs, trans_random_idx, trans_full_dim = rss(inpt=out, feat_dim=feat_dim, activation=activation, keep_dim=2 * keep_dim, 
+                                                     add_noise=add_noise, keep_noise=keep_noise, num_layers=num_layers, noise_std=noise_std, 
+                                                     base_name=base_name, transfer_name='_transfer')
         random_idx['trans_random_idx'] = trans_random_idx
         full_dim['trans_full_dim'] = trans_full_dim
 
