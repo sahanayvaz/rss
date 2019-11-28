@@ -271,7 +271,8 @@ class Trainer(object):
                          nentities_per_batch=nentities_per_batch,
                          for_visuals=args['for_visuals'],
                          transfer_load=args['transfer_load'],
-                         load_path=self.load_path)
+                         load_path=self.load_path,
+                         freeze_weights=args['freeze_weights'])
 
     def _load_mean_std(self, load_path_pkl):
         with open(load_path_pkl, 'rb') as file_:
@@ -323,8 +324,9 @@ class Trainer(object):
         # in case we are restoring the training
         if self.restore_iter > -1:
             self.agent.load(self.load_path)
-            curr_iter = self.restore_iter
-
+            if not self.args['transfer_load']:
+                curr_iter = self.restore_iter
+            
         print('max_iter: {}'.format(self.max_iter))
 
         
@@ -397,9 +399,6 @@ class Trainer(object):
             if curr_iter in inter_save:
                 self.agent.save(curr_iter, cliprange=curr_cr)
             
-            if curr_iter == 1:
-                self.agent.save(curr_iter, cliprange=curr_cr)
-
             curr_iter += 1
 
         self.agent.save(curr_iter, cliprange=curr_cr)

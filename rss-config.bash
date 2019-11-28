@@ -88,7 +88,7 @@ do
                               --attention=0 --recurrent=0 \
                               --add_noise=0 \
                               --save_interval=$save_interval --save_dir=$save_dir --log_dir="./log_dir" \
-                              --load_dir="$save_dir/MARIO-1-1-baseline-v0/" --transfer_load=0\
+                              --load_dir="$save_dir/MARIO-1-1-baseline-v0/" --transfer_load=1 --freeze_weights=0 \
                               --exp_name=$exp_name --evaluation=0
 done
 
@@ -114,7 +114,7 @@ do
                               --attention=0 --recurrent=0 \
                               --add_noise=0 \
                               --save_interval=$save_interval --save_dir=$save_dir --log_dir="./log_dir" \
-                              --load_dir="$save_dir/MARIO-1-1-RSS-v0/" --transfer_load=1\
+                              --load_dir="$save_dir/MARIO-1-1-RSS-v0/" --transfer_load=1 --freeze_weights=1 \
                               --exp_name=$exp_name --evaluation=0
 done
 
@@ -141,7 +141,7 @@ do
                               --attention=0 --recurrent=0 \
                               --add_noise=0 \
                               --save_interval=$save_interval --save_dir=$save_dir --log_dir="./log_dir" \
-                              --load_dir="$save_dir/MARIO-1-1-HH-v0/" --transfer_load=1\
+                              --load_dir="$save_dir/MARIO-1-1-HH-v0/" --transfer_load=1 --freeze_weights=1 \
                               --exp_name=$exp_name --evaluation=0
 done
 

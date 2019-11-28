@@ -117,7 +117,8 @@ def add_saver_loger_params(parser):
     ## added those new
     parser.add_argument('--load_path', type=str, default=None)
     parser.add_argument('--transfer_load', type=int, default=0)
-
+    parser.add_argument('--freeze_weights', type=int, default=0)
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     add_environment_params(parser)
@@ -157,7 +158,7 @@ if __name__ == '__main__':
 
     if args.load_dir is None:
         args.load_dir = args.save_dir
-        
+
     model_spec_dir = './model_specs'
     print(args.log_dir)
     print(args.save_dir)

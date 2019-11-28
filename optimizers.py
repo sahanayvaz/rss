@@ -23,7 +23,7 @@ class PPO(object):
                  jacobian_loss, nparticles,
                  entity_loss, nentities_per_batch, entity_randomness,
                  for_visuals,
-                 transfer_load=False, load_path=None):
+                 transfer_load=False, load_path=None, freeze_weights=False):
         
         # for now we do not have recurrent implementation
         if recurrent:
@@ -33,6 +33,7 @@ class PPO(object):
         self.log_dir = log_dir
 
         self.transfer_load = transfer_load
+        self.freeze_weights = freeze_weights
 
         # save the random_idx of the random connections for the future
         if policy.random_idx is not None:
@@ -395,7 +396,8 @@ class PPO(object):
             for t in trainable_variables:
                 if var_ckpt[0] == t.op.name:
                     self.vars_dict[var_ckpt[0]] = t
-                    trainable_variables.remove(t)
+                    if self.freeze_weights:
+                       trainable_variables.remove(t)
 
     def load(self, load_path):
         self.saver.restore(sess(), load_path)
