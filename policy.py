@@ -19,7 +19,7 @@ class Policy(object):
                  entity_randomness,
                  num_repeat, num_replace_ratio,
                  add_noise, keep_noise, noise_std, transfer_load,
-                 num_layers,
+                 num_layers, keep_dim,
                  vf_coef, coinrun):
         
         # warnings
@@ -62,7 +62,8 @@ class Policy(object):
                 ''')
         self.transfer_load = transfer_load
         self.num_layers = num_layers
-
+        self.keep_dim = keep_dim
+        
         self.coinrun = coinrun
         self.num_repeat = int(num_repeat)
         self.num_replace_ratio = int(num_replace_ratio)
@@ -268,7 +269,6 @@ class Policy(object):
 
             elif self.feat_spec == 'feat_rss_v0':
                 # this is for RSS part
-                self.keep_dim = 30
                 print('''
 
                     adding random sparse noise: {}
@@ -319,15 +319,15 @@ class Policy(object):
                     WE ARE FULL_SPARSE...
 
                     ''')
-                keep_dim = 120
+
                 x_pol, random_idx_pol, full_dim_pol = utils.feat_rss_v0(out=x, feat_dim=self.pdparamsize, activation=None, 
-                                                                        add_noise=self.add_noise, keep_dim=keep_dim,
+                                                                        add_noise=self.add_noise, keep_dim=self.keep_dim,
                                                                         keep_noise=self.keep_noise, noise_std=self.noise_std,
                                                                         num_layers=1, base_name='policy',
                                                                         transfer_load=self.transfer_load)
                 
                 x_val, random_idx_val, full_dim_val = utils.feat_rss_v0(out=x, feat_dim=1, activation=None, 
-                                                                        add_noise=self.add_noise, keep_dim=keep_dim,
+                                                                        add_noise=self.add_noise, keep_dim=self.keep_dim,
                                                                         keep_noise=self.keep_noise, noise_std=self.noise_std,
                                                                         num_layers=1, base_name='value',
                                                                         transfer_load=self.transfer_load)

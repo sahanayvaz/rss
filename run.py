@@ -180,7 +180,8 @@ class Trainer(object):
                              keep_noise=args['keep_noise'],
                              noise_std=args['noise_std'],
                              transfer_load=args['transfer_load'],
-                             num_layers=args['num_layers'])
+                             num_layers=args['num_layers'],
+                             keep_dim=args['keep_dim'])
 
         # cliprange will be annealed (was 0.1 for mario experiments)
         
