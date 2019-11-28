@@ -185,16 +185,32 @@ class PPO(object):
         grads, var = zip(*gradsandvar)
 
         # we only do this operation if our features network is not feat_v0
-        if self.policy.feat_spec != 'feat_v0':
-            # this is a gradient hack to make rss work
-            for i, g in enumerate(grads[-14:-8]):
-                print('g: {}'.format(g))
-                sparse_idx = self.policy.random_idx[i]
-                full_dim = self.policy.full_dim[i]
-                mult_conts = np.zeros(full_dim, dtype=np.float32)
-                mult_conts[sparse_idx] = 1.0
-                g = tf.multiply(g, tf.convert_to_tensor(mult_conts))
+        if self.policy.feat_spec == 'feat_rss_v0':
+            if self.policy.policy_spec == 'ls_c_v0':
+                # this is a gradient hack to make rss work
+                for i, g in enumerate(grads[-14:-8]):
+                    print('g: {}'.format(g))
+                    sparse_idx = self.policy.random_idx[i]
+                    full_dim = self.policy.full_dim[i]
+                    mult_conts = np.zeros(full_dim, dtype=np.float32)
+                    mult_conts[sparse_idx] = 1.0
+                    g = tf.multiply(g, tf.convert_to_tensor(mult_conts))
 
+            elif self.policy.policy_spec == 'ls_c_hh':
+                # this is a gradient hack to make rss work
+                # this is completely getting out of hands, every single time I change somethings
+                # i have to manually update a portion of my code
+                for i, g in enumerate(grads[-12:-6]):
+                    print('g: {}'.format(g))
+                    sparse_idx = self.policy.random_idx[i]
+                    full_dim = self.policy.full_dim[i]
+                    mult_conts = np.zeros(full_dim, dtype=np.float32)
+                    mult_conts[sparse_idx] = 1.0
+                    g = tf.multiply(g, tf.convert_to_tensor(mult_conts))
+
+            else:
+                raise NotImplementedError()
+            
         if self.max_grad_norm is not None:
             grads, _grad_norm = tf.clip_by_global_norm(grads, self.max_grad_norm)
 
