@@ -22,6 +22,7 @@ import cv2
 import time
 import matplotlib.pyplot as plt
 import sys
+import shutil
 
 import warnings
 
@@ -296,7 +297,12 @@ class Trainer(object):
                 save_path_pkl = os.path.join(self.args['load_dir'], 'mean_std.pkl')
                 if self.args['restore_iter'] > -1:
                     self._load_mean_std(save_path_pkl)
-                    # print('restore mean and std from: {}'.format(save_path_pkl))
+
+                    # copy the transfered mean_std.pkl to the new folder
+                    # this will be used to test for forgetting
+                    if self.args['transfer_load']:
+                        cp_path_pkl = os.path.join(self.args['save_dir'], 'mean_std.pkl')
+                        shutil.copyfile(save_path_pkl, cp_path_pkl)
 
                 else:
                     self.ob_mean, self.ob_std = utils.random_agent_mean_std(env=self.env)
@@ -343,21 +349,6 @@ class Trainer(object):
         total_time = 0.0
         # results_list = []
 
-        if self.early_max_iter == 0:
-            ## removed within training evaluation
-            ## i could not make flag_sum to work properly
-            ## evaluate each 100 run for 20 training levels
-            # only for mario
-            if self.args['env_kind'] == 'mario':
-                save_video = False
-                nlevels = 20
-                results, _ = self.agent.evaluate(nlevels, save_video)
-                results['iter'] = curr_iter
-                for (k, v) in results.items():
-                    self.result_logger.logkv(k, v)
-                self.result_logger.dumpkvs()
-                sys.exit()
-                
         while curr_iter < self.early_max_iter:
             frac = 1.0 - (float(curr_iter) / self.max_iter)
 
@@ -375,6 +366,21 @@ class Trainer(object):
             # linearly increasing penalty
             curr_beta_entity = self.beta_entity_loss(1.0 - frac)
             
+            ## removed within training evaluation
+            ## i could not make flag_sum to work properly
+            ## evaluate each 100 run for 20 training levels
+            # only for mario (first evaluate, then update)
+            # i am doing change to get zero-shot generalization without any effort
+            if self.args['env_kind'] == 'mario':
+                if curr_iter % (self.args['save_interval']) == 0:
+                    save_video = False
+                    nlevels = 20
+                    results, _ = self.agent.evaluate(nlevels, save_video)
+                    results['iter'] = curr_iter
+                    for (k, v) in results.items():
+                        self.result_logger.logkv(k, v)
+                    self.result_logger.dumpkvs()
+
             # representation learning in each 25 steps
             rep_train = ((curr_iter + 1) % 25 == 0)
             info = self.agent.update(rep_train=rep_train, lr=curr_lr, cliprange=curr_cr, 
@@ -395,20 +401,6 @@ class Trainer(object):
             ## logging results using baselines's logger
             logger.logkvs(info)
             logger.dumpkvs()
-
-            ## removed within training evaluation
-            ## i could not make flag_sum to work properly
-            ## evaluate each 100 run for 20 training levels
-            # only for mario
-            if self.args['env_kind'] == 'mario':
-                if curr_iter % (self.args['save_interval']) == 0:
-                    save_video = False
-                    nlevels = 20
-                    results, _ = self.agent.evaluate(nlevels, save_video)
-                    results['iter'] = curr_iter
-                    for (k, v) in results.items():
-                        self.result_logger.logkv(k, v)
-                    self.result_logger.dumpkvs()
 
             if curr_iter % self.args['save_interval'] == 0:
                 self.agent.save(curr_iter, cliprange=curr_cr)
