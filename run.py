@@ -21,6 +21,7 @@ import cloudpickle
 import cv2
 import time
 import matplotlib.pyplot as plt
+import sys
 
 import warnings
 
@@ -341,6 +342,22 @@ class Trainer(object):
 
         total_time = 0.0
         # results_list = []
+
+        if self.early_max_iter == 0:
+            ## removed within training evaluation
+            ## i could not make flag_sum to work properly
+            ## evaluate each 100 run for 20 training levels
+            # only for mario
+            if self.args['env_kind'] == 'mario':
+                save_video = False
+                nlevels = 20
+                results, _ = self.agent.evaluate(nlevels, save_video)
+                results['iter'] = curr_iter
+                for (k, v) in results.items():
+                    self.result_logger.logkv(k, v)
+                self.result_logger.dumpkvs()
+                sys.exit()
+                
         while curr_iter < self.early_max_iter:
             frac = 1.0 - (float(curr_iter) / self.max_iter)
 
