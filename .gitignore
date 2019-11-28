@@ -2,3 +2,6 @@ __pycache__/
 save_dir/
 log_dir/
 model_specs/
+
+LEO-log_dir/
+tests/

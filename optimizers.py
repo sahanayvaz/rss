@@ -22,7 +22,8 @@ class PPO(object):
                  normrew, cliprew, normadv,
                  jacobian_loss, nparticles,
                  entity_loss, nentities_per_batch, entity_randomness,
-                 for_visuals):
+                 for_visuals,
+                 transfer_load=False, load_path=None):
         
         # for now we do not have recurrent implementation
         if recurrent:
@@ -30,6 +31,8 @@ class PPO(object):
         
         self.save_dir = save_dir
         self.log_dir = log_dir
+
+        self.transfer_load = transfer_load
 
         # save the random_idx of the random connections for the future
         if policy.random_idx is not None:
@@ -155,6 +158,9 @@ class PPO(object):
                               'approxkl': approxkl,
                               'clipfrac': clipfrac}
 
+            if self.transfer_load:
+                self._pre_load(load_path)
+
             # initialize various parameters
             self._init()
 
@@ -174,6 +180,7 @@ class PPO(object):
 
         params = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
 
+        print('__init trainable variables in the collection...')
         for p in params:
             print(p)
 
@@ -233,6 +240,9 @@ class PPO(object):
 
         # set saver
         self.saver = tf.train.Saver(max_to_keep=None)
+        
+        if self.transfer_load:
+            self.saver = tf.train.Saver(var_list=self.vars_dict, max_to_keep=None)
         # self.summary_op = tf.summary.merge_all()
         # self.summary_writer = tf.summary.FileWriter(self.log_dir, sess().graph)
 
@@ -369,6 +379,23 @@ class PPO(object):
                                 oldvpreds=oldvpreds,
                                 rets=rets,
                                 cliprange=cliprange)
+
+    def _pre_load(self, load_path):
+        print('''
+
+            PRE LOADING...
+
+            ''')
+        
+        trainable_variables = tf.get_collection_ref(tf.GraphKeys.TRAINABLE_VARIABLES)
+
+        self.vars_dict = {}
+        for var_ckpt in tf.train.list_variables(load_path):
+            # remove the variables in the ckpt from trainable variables
+            for t in trainable_variables:
+                if var_ckpt[0] == t.op.name:
+                    self.vars_dict[var_ckpt[0]] = t
+                    trainable_variables.remove(t)
 
     def load(self, load_path):
         self.saver.restore(sess(), load_path)

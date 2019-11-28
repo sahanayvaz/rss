@@ -101,9 +101,8 @@ def feat_v0(out, feat_dim, activation):
     out = fc(out, feat_dim, activation='relu', batchnormalize=False, init_scale=np.sqrt(2))
     return out
 
-# i want to make this (sparse and skipped)
-# we will train this without adding any noise
-def feat_rss_v0(out, feat_dim, activation,keep_dim, add_noise=False, keep_noise=0, num_layers=2, noise_std=1.0):
+def rss(out, feat_dim, activation, keep_dim, add_noise=False, keep_noise=0, num_layers=2, noise_std=1.0,
+        name_add=''):
     in_feat_dim = out.shape[-1]
     print('in_feat_dim: {}'.format(in_feat_dim))
     
@@ -124,9 +123,9 @@ def feat_rss_v0(out, feat_dim, activation,keep_dim, add_noise=False, keep_noise=
 
     dense_weights = tf.sparse.to_dense(sparse_weights, default_value=0.0, validate_indices=False)
 
-    weights = tf.Variable(dense_weights, trainable=True, dtype=tf.float32, name='feat_v1_weights')
+    weights = tf.Variable(dense_weights, trainable=True, dtype=tf.float32, name='feat_v1_weights{}'.format(name_add))
     bias_initializer = tf.constant_initializer(0.0)(shape=(feat_dim,))
-    biases = tf.Variable(initial_value=bias_initializer, trainable=True, dtype=tf.float32, name='feat_v1_biases')
+    biases = tf.Variable(initial_value=bias_initializer, trainable=True, dtype=tf.float32, name='feat_v1_biases{}'.format(name_add))
 
     if add_noise:
         # get random weights
@@ -140,7 +139,7 @@ def feat_rss_v0(out, feat_dim, activation,keep_dim, add_noise=False, keep_noise=
         random_w = tf.random.normal(shape=[keep_noise * feat_dim],
                                     mean=0.0,
                                     stddev=noise_std,
-                                    name='random_1')
+                                    name='random_1{}'.format(name_add))
         sparse_r_weights = tf.SparseTensor(indices=random_w_idx, values=random_w, dense_shape=(in_feat_dim, feat_dim))
         dense_r_weights = tf.sparse.to_dense(sparse_r_weights, default_value=0.0, validate_indices=False)
         weights = weights + dense_r_weights
@@ -164,9 +163,9 @@ def feat_rss_v0(out, feat_dim, activation,keep_dim, add_noise=False, keep_noise=
 
     dense_weights = tf.sparse.to_dense(sparse_weights, default_value=0.0, validate_indices=False)
 
-    weights_2_1 = tf.Variable(dense_weights, trainable=True, dtype=tf.float32, name='feat_v1_weights_2_1')
+    weights_2_1 = tf.Variable(dense_weights, trainable=True, dtype=tf.float32, name='feat_v1_weights_2_1{}'.format(name_add))
     bias_initializer = tf.constant_initializer(0.0)(shape=(feat_dim,))
-    biases_2_1 = tf.Variable(initial_value=bias_initializer, trainable=True, dtype=tf.float32, name='feat_v1_biases_2_1')
+    biases_2_1 = tf.Variable(initial_value=bias_initializer, trainable=True, dtype=tf.float32, name='feat_v1_biases_2_1{}'.format(name_add))
 
     # poor man's added noise
     # this should not be like that, we should be changing the connections
@@ -183,7 +182,7 @@ def feat_rss_v0(out, feat_dim, activation,keep_dim, add_noise=False, keep_noise=
         random_w = tf.random.normal(shape=[(keep_noise // 2) * feat_dim],
                                     mean=0.0,
                                     stddev=noise_std,
-                                    name='random_2')
+                                    name='random_2{}'.format(name_add))
         sparse_r_weights = tf.SparseTensor(indices=random_w_idx, values=random_w, dense_shape=(in_feat_dim, feat_dim))
         dense_r_weights = tf.sparse.to_dense(sparse_r_weights, default_value=0.0, validate_indices=False)
         weights_2_1 = weights_2_1 + dense_r_weights
@@ -207,9 +206,9 @@ def feat_rss_v0(out, feat_dim, activation,keep_dim, add_noise=False, keep_noise=
 
     dense_weights = tf.sparse.to_dense(sparse_weights, default_value=0.0, validate_indices=False)
 
-    weights_2 = tf.Variable(dense_weights, trainable=True, dtype=tf.float32, name='feat_v1_weights_2')
+    weights_2 = tf.Variable(dense_weights, trainable=True, dtype=tf.float32, name='feat_v1_weights_2{}'.format(name_add))
     bias_initializer = tf.constant_initializer(0.0)(shape=(feat_dim,))
-    biases_2 = tf.Variable(initial_value=bias_initializer, trainable=True, dtype=tf.float32, name='feat_v1_biases_2')
+    biases_2 = tf.Variable(initial_value=bias_initializer, trainable=True, dtype=tf.float32, name='feat_v1_biases_2{}'.format(name_add))
 
     if add_noise:
         # get random weights
@@ -223,7 +222,7 @@ def feat_rss_v0(out, feat_dim, activation,keep_dim, add_noise=False, keep_noise=
         random_w = tf.random.normal(shape=[(keep_noise // 2) * feat_dim],
                                     mean=0.0,
                                     stddev=noise_std,
-                                    name='random_3')
+                                    name='random_3{}'.format(name_add))
         sparse_r_weights = tf.SparseTensor(indices=random_w_idx, values=random_w, dense_shape=(feat_dim, feat_dim))
         dense_r_weights = tf.sparse.to_dense(sparse_r_weights, default_value=0.0, validate_indices=False)
         weights_2 = weights_2 + dense_r_weights
@@ -233,12 +232,28 @@ def feat_rss_v0(out, feat_dim, activation,keep_dim, add_noise=False, keep_noise=
     
     # we always add bias
     random_idx = [random_idx_1, feat_dim-1, random_idx_2_1, feat_dim-1, random_idx_2, feat_dim-1]
+    for r in random_idx:
+        print(np.asarray(r).shape)
+
     full_dim = [(in_feat_dim, feat_dim), (feat_dim,), 
                 (in_feat_dim, feat_dim), (feat_dim,), 
                 (feat_dim, feat_dim), (feat_dim,)]
-
     return out_2 + out_2_1, random_idx, full_dim
 
+# i want to make this (sparse and skipped)
+# we will train this without adding any noise
+def feat_rss_v0(out, feat_dim, activation,keep_dim, add_noise=False, keep_noise=0, num_layers=2, noise_std=1.0,
+                transfer_load=False):
+    outs, random_idx, full_dim = rss(out=out, feat_dim=feat_dim, activation=activation, keep_dim=keep_dim, 
+                                     add_noise=False, keep_noise=0, num_layers=2, noise_std=1.0, name_add='')
+
+    if transfer_load:
+        outs, random_idx, full_dim = rss(out=out, feat_dim=feat_dim, activation=activation, keep_dim=2 * keep_dim, 
+                                         add_noise=False, keep_noise=0, num_layers=2, noise_std=1.0, name_add='_transfer')
+
+    # print('sum_diff of r_1 and r_2: {}'.format(np.sum(r_2 - r_1)))
+
+    return outs, random_idx, full_dim
 
 # we are making a lot of changes
 def cr_fc_v0(out, ncat, nentities):

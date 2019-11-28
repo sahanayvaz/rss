@@ -176,7 +176,8 @@ class Trainer(object):
                              num_replace_ratio=args['num_replace_ratio'],
                              add_noise=args['add_noise'],
                              keep_noise=args['keep_noise'],
-                             noise_std=args['noise_std'])
+                             noise_std=args['noise_std'],
+                             transfer_load=args['transfer_load'])
 
         # cliprange will be annealed (was 0.1 for mario experiments)
         
@@ -220,6 +221,28 @@ class Trainer(object):
         # max_grad_norm
         max_grad_norm = args['max_grad_norm']
 
+        # in case we are restoring the training
+        self.restore_iter = self.args['restore_iter']
+        self.load_path = None
+        if self.restore_iter > -1:
+            load_dir = self.args['save_dir']
+            if args['transfer_load']:
+                print('''
+
+
+                    TRANSFER LOAD...
+
+
+                    ''')
+                load_dir = self.args['load_dir']
+            self.load_path = os.path.join(self.args['load_dir'], 'model-{}'.format(self.restore_iter))
+
+        print('''
+
+            loading model from {}
+
+            '''.format(self.load_path))
+
         # get ob_space from self.policy
         self.agent = PPO(scope='ppo',
                          env=self.env,
@@ -246,7 +269,9 @@ class Trainer(object):
                          entity_loss=args['entity_loss'],
                          entity_randomness=args['entity_randomness'],
                          nentities_per_batch=nentities_per_batch,
-                         for_visuals=args['for_visuals'])
+                         for_visuals=args['for_visuals'],
+                         transfer_load=args['transfer_load'],
+                         load_path=self.load_path)
 
     def _load_mean_std(self, load_path_pkl):
         with open(load_path_pkl, 'rb') as file_:
@@ -266,8 +291,8 @@ class Trainer(object):
                 load_path_pkl = os.path.join(load_path, 'mean_std.pkl')
                 self._load_mean_std(load_path_pkl)
             else:
-                save_path_pkl = os.path.join(self.args['save_dir'], 'mean_std.pkl')
-                if self.args['restore_iter']:
+                save_path_pkl = os.path.join(self.args['load_dir'], 'mean_std.pkl')
+                if self.args['restore_iter'] > -1:
                     self._load_mean_std(save_path_pkl)
                     # print('restore mean and std from: {}'.format(save_path_pkl))
 
@@ -296,11 +321,9 @@ class Trainer(object):
         self.result_logger = logger.Logger(dir=dirc, output_formats=output_formats)
 
         # in case we are restoring the training
-        restore_iter = self.args['restore_iter']
-        if restore_iter:
-            load_path = os.path.join(self.args['save_dir'], 'model-{}'.format(restore_iter))
-            self.agent.load(load_path)
-            curr_iter = restore_iter
+        if self.restore_iter > -1:
+            self.agent.load(self.load_path)
+            curr_iter = self.restore_iter
 
         print('max_iter: {}'.format(self.max_iter))
 
@@ -374,6 +397,9 @@ class Trainer(object):
             if curr_iter in inter_save:
                 self.agent.save(curr_iter, cliprange=curr_cr)
             
+            if curr_iter == 1:
+                self.agent.save(curr_iter, cliprange=curr_cr)
+
             curr_iter += 1
 
         self.agent.save(curr_iter, cliprange=curr_cr)
@@ -466,7 +492,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 
     parser.add_argument('--model_spec', type=str, default='')
-    parser.add_argument('--restore_iter', type=int, default=0)
+    parser.add_argument('--restore_iter', type=int, default=-1)
     parser.add_argument('--server_type', type=str, default='local')
     args = parser.parse_args()
 

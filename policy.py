@@ -18,7 +18,7 @@ class Policy(object):
                  entity_loss, tol_entity_loss, nentities_per_state, nentities_per_batch,
                  entity_randomness,
                  num_repeat, num_replace_ratio,
-                 add_noise, keep_noise, noise_std,
+                 add_noise, keep_noise, noise_std, transfer_load,
                  vf_coef, coinrun):
         
         # warnings
@@ -59,7 +59,8 @@ class Policy(object):
                 WARNING: policy is operating with entity-centric penalty...
                 
                 ''')
-            
+        self.transfer_load = transfer_load
+
         self.coinrun = coinrun
         self.num_repeat = int(num_repeat)
         self.num_replace_ratio = int(num_replace_ratio)
@@ -268,11 +269,13 @@ class Policy(object):
                 self.keep_dim = 30
                 print('''
 
-                    adding random sparse noise
+                    adding random sparse noise: {}
 
-                    ''')
+                    '''.format(self.add_noise))
+
                 x, random_idx, full_dim = utils.feat_rss_v0(out=x, feat_dim=self.feat_dim, activation=self.activation, add_noise=self.add_noise, keep_dim=self.keep_dim,
-                                                            keep_noise=self.keep_noise, noise_std=self.noise_std)
+                                                            keep_noise=self.keep_noise, noise_std=self.noise_std,
+                                                            transfer_load=self.transfer_load)
                 
                 # we will use those idx to mask the gradients of not-selected indices as well as 
                 # inject some noise

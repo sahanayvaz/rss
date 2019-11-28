@@ -94,7 +94,7 @@ def add_network_params(parser):
 
     # attention
     parser.add_argument('--attention', type=int, default=0)
-    parser.add_argument('--reduce_max', type=int, default=1)
+    parser.add_argument('--reduce_max', type=int, default=0)
 
     parser.add_argument('--dropout_attention', type=int, default=0)
 
@@ -112,7 +112,11 @@ def add_saver_loger_params(parser):
 
     parser.add_argument('--save_dir', type=str, default='./save_dir')
     parser.add_argument('--log_dir', type=str, default='./log_dir')
+    parser.add_argument('--load_dir', type=str, default=None)
 
+    ## added those new
+    parser.add_argument('--load_path', type=str, default=None)
+    parser.add_argument('--transfer_load', type=int, default=0)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
@@ -151,6 +155,9 @@ if __name__ == '__main__':
     args.save_dir = os.path.join(args.save_dir, exp_name)
     args.log_dir = os.path.join(args.log_dir, exp_name)
 
+    if args.load_dir is None:
+        args.load_dir = args.save_dir
+        
     model_spec_dir = './model_specs'
     print(args.log_dir)
     print(args.save_dir)
