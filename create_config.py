@@ -6,7 +6,7 @@ def add_environment_params(parser):
     # environment configs
     parser.add_argument('--env_kind', type=str, default='mario')
     parser.add_argument('--env_id', type=str, default='SuperMarioBros-1-1-v0')
-    parser.add_argument('--test_id', type=str, default='SuperMarioBros-2-1-v0')
+    parser.add_argument('--test_id', type=str, default=None)
     parser.add_argument('--NUM_ENVS', type=int, default=8)
     parser.add_argument('--NUM_LEVELS', type=int, default=500)
 
@@ -51,6 +51,7 @@ def add_optimization_params(parser):
     
     # we are running those experiments for 64M timesteps (== frames)
     parser.add_argument('--num_timesteps', type=int, default=int(128e6))
+    parser.add_argument('--early_final', type=int, default=int(128e6))
 
     # extra losses
     # 0: None, 1: only frobenius penalty,
@@ -82,6 +83,7 @@ def add_network_params(parser):
     parser.add_argument('--perception', type=str, default='nature_cnn')
 
     ## if you make a change to cr-fc-v0, make sure to update
+    parser.add_argument('--feat_spec', type=str, default='feat_v0')
     parser.add_argument('--policy_spec', type=str, default='ls_c_v0')
 
     # check coinrun activation

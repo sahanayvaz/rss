@@ -103,7 +103,7 @@ def feat_v0(out, feat_dim, activation):
 
 # i want to make this (sparse and skipped)
 # we will train this without adding any noise
-def feat_v1(out, feat_dim, activation,keep_dim, add_noise=False, keep_noise=0, num_layers=2, noise_std=1.0):
+def feat_rss_v0(out, feat_dim, activation,keep_dim, add_noise=False, keep_noise=0, num_layers=2, noise_std=1.0):
     in_feat_dim = out.shape[-1]
     print('in_feat_dim: {}'.format(in_feat_dim))
     
@@ -285,6 +285,24 @@ def ls_c_v0(out, ncat, activation, nentities):
     pdparam = fc(out, ncat, activation=None, batchnormalize=False, init_scale=0.01)
     vpred = fc(out, 1, activation=None, batchnormalize=False, init_scale=1.0)[:, 0]
     return pdparam, vpred
+
+
+def ls_c_hh(out, ncat, activation, nentities):
+    hidsize = 512
+
+    # might not be necessary
+    if nentities:
+        hidsize = nentities
+    
+    # actual policy
+    # removing one of the outs for head-to-head comparison
+    # out = fc(out, hidsize, activation=activation, batchnormalize=False, init_scale=np.sqrt(2))
+    out = fc(out, hidsize, activation=activation, batchnormalize=False, init_scale=np.sqrt(2))
+    
+    pdparam = fc(out, ncat, activation=None, batchnormalize=False, init_scale=0.01)
+    vpred = fc(out, 1, activation=None, batchnormalize=False, init_scale=1.0)[:, 0]
+    return pdparam, vpred
+
 
 def ls_c_v1(out, ncat, activation, nentities=None):
     feat_dim = 512

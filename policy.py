@@ -11,7 +11,7 @@ sess = tf.get_default_session
 
 class Policy(object):
     def __init__(self, scope, ob_space, ac_space, ob_mean, ob_std, 
-                 perception, policy_spec, 
+                 perception, feat_spec, policy_spec, 
                  activation, layernormalize, batchnormalize, 
                  attention, reduce_max, dropout_attention, recurrent,
                  jacobian_loss, nparticles,
@@ -105,6 +105,7 @@ class Policy(object):
         self.feat_dim = 512
 
         # policy module
+        self.feat_spec = feat_spec
         self.policy_spec = policy_spec
 
         self.activation = activation
@@ -258,24 +259,25 @@ class Policy(object):
 
     def get_features(self, x, reuse):
         with tf.variable_scope(self.scope + '_features', reuse=reuse):
-            # if self.feat_spec == 'feat_v1':
-            # change this to feat_v1
+            if self.feat_spec == 'feat_v0':
+                x = utils.feat_v0(x, feat_dim=self.feat_dim, activation=self.activation)
+                self.random_idx = None
 
-            # this is for RSS part
-            self.keep_dim = 30
-            print('''
+            elif self.feat_spec == 'feat_rss_v0':
+                # this is for RSS part
+                self.keep_dim = 30
+                print('''
 
-                adding random sparse noise
+                    adding random sparse noise
 
-                ''')
-            x, random_idx, full_dim = utils.feat_v1(out=x, feat_dim=self.feat_dim, activation=self.activation, add_noise=self.add_noise, keep_dim=self.keep_dim,
-                                                    keep_noise=self.keep_noise, noise_std=self.noise_std)
-            
-            # we will use those idx to mask the gradients of not-selected indices as well as 
-            # inject some noise
-            self.random_idx = random_idx
-            self.full_dim = full_dim
-            # x = utils.feat_v0(x, feat_dim=self.feat_dim, activation=self.activation)
+                    ''')
+                x, random_idx, full_dim = utils.feat_rss_v0(out=x, feat_dim=self.feat_dim, activation=self.activation, add_noise=self.add_noise, keep_dim=self.keep_dim,
+                                                            keep_noise=self.keep_noise, noise_std=self.noise_std)
+                
+                # we will use those idx to mask the gradients of not-selected indices as well as 
+                # inject some noise
+                self.random_idx = random_idx
+                self.full_dim = full_dim
         return x
 
     def get_policy(self, x, reuse):
@@ -292,7 +294,10 @@ class Policy(object):
                 x = utils.ls_c_v0(x, ncat=self.pdparamsize, activation=self.activation, nentities=self.nentities_per_state)
             elif self.policy_spec == 'ls_c_v1':
                 x = utils.ls_c_v1(x, ncat=self.pdparamsize, activation=self.activation, nentities=self.nentities_per_state)
-            
+
+            elif self.policy_spec == 'ls_c_hh':
+                x = utils.ls_c_hh(x, ncat=self.pdparamsize, activation=self.activation, nentities=self.nentities_per_state)
+
             else:
                 raise NotImplementedError('only cr_fc_v0 or ls_c_v0 policies are allowed')
         pdparam, vpred = x[0], x[1]

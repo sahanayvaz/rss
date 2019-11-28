@@ -30,6 +30,7 @@ def start_experiment(**args):
     # create environment
     # coinrun environment is already vectorized
     env, test_env = make_env_all_params(args=args)
+
     # set random seeds for reproducibility
     utils.set_global_seeds()
 
@@ -70,16 +71,23 @@ def make_env_all_params(args):
     elif args['env_kind'] == 'mario':
         if args['input_shape'] == '84x84':
             start_method = 'forkserver'
+
+            # the problem was about the initial memory cost
+            # increasing the memory requirement fixed the problem
             if args['server_type'] == 'LEONHARD':
-                start_method = 'spawn'
+                start_method = 'forkserver'
             env = make_mario_vec_env(nenvs=args['NUM_ENVS'],
                                      env_id=args['env_id'],
                                      frameskip=args['nframeskip'],
                                      start_method=start_method)
+            test_env = None
+            '''
             test_env = make_mario_vec_env(nenvs=args['NUM_ENVS'],
                                      env_id=args['test_id'],
                                      frameskip=args['nframeskip'],
                                      start_method=start_method)
+            '''
+
         else:
             raise NotImplementedError()
 
@@ -103,6 +111,17 @@ class Trainer(object):
         # nframeskip : number of frames to skip (we count the skipped frames as experiences)
         self.max_iter = int(args['num_timesteps']) // (args['nsteps'] * args['NUM_ENVS'] * args['nframeskip'])
         
+        # i do not want to mingle with my other frac dependent quantities
+        self.early_max_iter = int(args['early_final']) // (args['nsteps'] * args['NUM_ENVS'] * args['nframeskip'])
+        
+        print('''
+
+            self.max_iter: {},
+
+            self.early_max_iter: {}
+
+            '''.format(self.max_iter, self.early_max_iter))
+
         # set environment variables
         self._set_env_vars()
 
@@ -135,6 +154,7 @@ class Trainer(object):
                              ob_mean=self.ob_mean,
                              ob_std=self.ob_std,
                              perception=args['perception'],
+                             feat_spec=args['feat_spec'],
                              policy_spec=args['policy_spec'],
                              activation=args['activation'],
                              layernormalize=args['layernormalize'],
@@ -284,17 +304,19 @@ class Trainer(object):
 
         print('max_iter: {}'.format(self.max_iter))
 
+        
         # interim saves to compare in the future
         # for 128M frames, 
-        inter_save1 = int(self.args['num_timesteps'] // 8) // (self.args['nsteps'] * self.args['NUM_ENVS'] * self.args['nframeskip'])
-        inter_save2 = int(self.args['num_timesteps'] // 4) // (self.args['nsteps'] * self.args['NUM_ENVS'] * self.args['nframeskip'])
-        inter_save3 = int(self.args['num_timesteps'] // 2) // (self.args['nsteps'] * self.args['NUM_ENVS'] * self.args['nframeskip'])
-
-        print('inter_saves: {}, {}, {}'.format(inter_save1, inter_save2, inter_save3))
+        
+        inter_save = []
+        for i in range(3):
+            divisor = (2**(i+1))
+            inter_save.append(int(self.args['num_timesteps'] // divisor) // (self.args['nsteps'] * self.args['NUM_ENVS'] * self.args['nframeskip']))
+        print('inter_save: {}'.format(inter_save))
 
         total_time = 0.0
         # results_list = []
-        while curr_iter < self.max_iter:
+        while curr_iter < self.early_max_iter:
             frac = 1.0 - (float(curr_iter) / self.max_iter)
 
             # self.agent.update calls rollout
@@ -349,9 +371,9 @@ class Trainer(object):
             if curr_iter % self.args['save_interval'] == 0:
                 self.agent.save(curr_iter, cliprange=curr_cr)
 
-            if curr_iter == inter_save1 or curr_iter == inter_save2 or curr_iter == inter_save3:
+            if curr_iter in inter_save:
                 self.agent.save(curr_iter, cliprange=curr_cr)
-
+            
             curr_iter += 1
 
         self.agent.save(curr_iter, cliprange=curr_cr)

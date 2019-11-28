@@ -143,7 +143,9 @@ class Runner(object):
     def evaluate(self, nlevels, save_video):
         train_results = self.eval_step(nlevels=nlevels, save_video=save_video, 
                                        env=self.env, name='train')
-        test_results = self.eval_step(nlevels=nlevels, save_video=save_video, 
-                                      env=self.test_env, name='test')
-        train_results.update(test_results)
+
+        if self.test_env is not None:
+            test_results = self.eval_step(nlevels=nlevels, save_video=save_video, 
+                                          env=self.test_env, name='test')
+            train_results.update(test_results)
         return train_results, None

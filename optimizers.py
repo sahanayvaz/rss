@@ -14,7 +14,8 @@ from runner import Runner
 sess = tf.get_default_session
 
 class PPO(object):
-    def __init__(self, scope, env, test_env, nenvs, save_dir, log_dir, policy, 
+    def __init__(self, scope, env, test_env, nenvs, save_dir, log_dir, 
+                 policy, 
                  use_news, recurrent, gamma, lam,
                  nepochs, nminibatches, nsteps, vf_coef,
                  ent_coef, max_grad_norm, 
@@ -29,6 +30,13 @@ class PPO(object):
         
         self.save_dir = save_dir
         self.log_dir = log_dir
+
+        # save the random_idx of the random connections for the future
+        if policy.random_idx is not None:
+            random_idx = np.asarray(policy.random_idx)
+            npz_path = os.path.join(self.save_dir, 'random_idx.npz')
+            np.savez_compressed(npz_path,
+                                random_idx=random_idx)
 
         with tf.variable_scope(scope):
             # ob_space, ac_space is from policy
@@ -176,14 +184,16 @@ class PPO(object):
 
         grads, var = zip(*gradsandvar)
 
-        # this is a gradient hack to make rss work
-        for i, g in enumerate(grads[-14:-8]):
-            print('g: {}'.format(g))
-            sparse_idx = self.policy.random_idx[i]
-            full_dim = self.policy.full_dim[i]
-            mult_conts = np.zeros(full_dim, dtype=np.float32)
-            mult_conts[sparse_idx] = 1.0
-            g = tf.multiply(g, tf.convert_to_tensor(mult_conts))
+        # we only do this operation if our features network is not feat_v0
+        if self.policy.feat_spec != 'feat_v0':
+            # this is a gradient hack to make rss work
+            for i, g in enumerate(grads[-14:-8]):
+                print('g: {}'.format(g))
+                sparse_idx = self.policy.random_idx[i]
+                full_dim = self.policy.full_dim[i]
+                mult_conts = np.zeros(full_dim, dtype=np.float32)
+                mult_conts[sparse_idx] = 1.0
+                g = tf.multiply(g, tf.convert_to_tensor(mult_conts))
 
         if self.max_grad_norm is not None:
             grads, _grad_norm = tf.clip_by_global_norm(grads, self.max_grad_norm)
