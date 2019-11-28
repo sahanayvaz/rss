@@ -1,6 +1,7 @@
 #!/bin/bash
 
 save_dir=$1
+save_interval=50
 # we will not employ any jacobian_loss not any entity_based loss
 for level in 1 2 3 4
 do
@@ -31,7 +32,7 @@ do
                               --attention=0 --recurrent=0 \
                               --add_noise=0 \
                               --for_visuals=1 \
-                              --save_interval=100 --save_dir=$save_dir --log_dir="./log_dir" \
+                              --save_interval=$save_interval --save_dir=$save_dir --log_dir="./log_dir" \
                               --exp_name=$exp_name --evaluation=0
 done
 
@@ -60,6 +61,6 @@ do
                               --layernormalize=0 --batchnormalize=0 \
                               --attention=0 --recurrent=0 \
                               --add_noise=0 \
-                              --save_interval=100 --save_dir=$save_dir --log_dir="./log_dir" \
+                              --save_interval=$save_interval --save_dir=$save_dir --log_dir="./log_dir" \
                               --exp_name=$exp_name --evaluation=0
 done

@@ -359,7 +359,7 @@ class Trainer(object):
             ## evaluate each 100 run for 20 training levels
             # only for mario
             if self.args['env_kind'] == 'mario':
-                if curr_iter % (self.args['save_interval'] // 10) == 0:
+                if curr_iter % (self.args['save_interval']) == 0:
                     save_video = False
                     nlevels = 20
                     results, _ = self.agent.evaluate(nlevels, save_video)

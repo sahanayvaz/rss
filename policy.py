@@ -294,7 +294,6 @@ class Policy(object):
                 x = utils.ls_c_v0(x, ncat=self.pdparamsize, activation=self.activation, nentities=self.nentities_per_state)
             elif self.policy_spec == 'ls_c_v1':
                 x = utils.ls_c_v1(x, ncat=self.pdparamsize, activation=self.activation, nentities=self.nentities_per_state)
-
             elif self.policy_spec == 'ls_c_hh':
                 x = utils.ls_c_hh(x, ncat=self.pdparamsize, activation=self.activation, nentities=self.nentities_per_state)
 
