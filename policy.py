@@ -19,6 +19,7 @@ class Policy(object):
                  entity_randomness,
                  num_repeat, num_replace_ratio,
                  add_noise, keep_noise, noise_std, transfer_load,
+                 num_layers,
                  vf_coef, coinrun):
         
         # warnings
@@ -60,7 +61,8 @@ class Policy(object):
                 
                 ''')
         self.transfer_load = transfer_load
-
+        self.num_layers = num_layers
+        
         self.coinrun = coinrun
         self.num_repeat = int(num_repeat)
         self.num_replace_ratio = int(num_replace_ratio)
@@ -273,8 +275,10 @@ class Policy(object):
 
                     '''.format(self.add_noise))
 
-                x, random_idx, full_dim = utils.feat_rss_v0(out=x, feat_dim=self.feat_dim, activation=self.activation, add_noise=self.add_noise, keep_dim=self.keep_dim,
+                x, random_idx, full_dim = utils.feat_rss_v0(out=x, feat_dim=self.feat_dim, activation=self.activation, 
+                                                            add_noise=self.add_noise, keep_dim=self.keep_dim,
                                                             keep_noise=self.keep_noise, noise_std=self.noise_std,
+                                                            num_layers=self.num_layers,
                                                             transfer_load=self.transfer_load)
                 
                 # we will use those idx to mask the gradients of not-selected indices as well as 
@@ -288,7 +292,7 @@ class Policy(object):
                     self.full_dim = full_dim['trans_full_dim']
 
                 self.random_idx_dict = random_idx
-                
+
         return x
 
     def get_policy(self, x, reuse):
