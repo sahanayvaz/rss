@@ -80,7 +80,6 @@ def make_env_all_params(args):
                                      env_id=args['env_id'],
                                      frameskip=args['nframeskip'],
                                      start_method=start_method)
-            test_env = None
             '''
             test_env = make_mario_vec_env(nenvs=args['NUM_ENVS'],
                                      env_id=args['test_id'],
@@ -94,6 +93,7 @@ def make_env_all_params(args):
     else:
         # accept only coinrun and mario
         raise NotImplementedError()
+    test_env = None
     return env, test_env
 
 class Trainer(object):

@@ -215,7 +215,14 @@ class PPO(object):
                     mult_conts = np.zeros(full_dim, dtype=np.float32)
                     mult_conts[sparse_idx] = 1.0
                     g = tf.multiply(g, tf.convert_to_tensor(mult_conts))
-
+            elif self.policy.policy_spec == 'cr_fc_v0':
+                for i, g in enumerate(grads[-10:-4]):
+                    print('g: {}'.format(g))
+                    sparse_idx = self.policy.random_idx[i]
+                    full_dim = self.policy.full_dim[i]
+                    mult_conts = np.zeros(full_dim, dtype=np.float32)
+                    mult_conts[sparse_idx] = 1.0
+                    g = tf.multiply(g, tf.convert_to_tensor(mult_conts))
             else:
                 raise NotImplementedError()
             

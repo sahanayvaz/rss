@@ -246,3 +246,25 @@ do
                                    --exp_name=$exp_name --evaluation=0
      done
 done
+
+
+
+exp_name='coinrun-RSS-v0'
+python3 create_config.py --env_kind="coinrun" --env_id="coinrun" --NUM_ENVS=32 --NUM_LEVELS=500 \
+                         --SET_SEED=13 --PAINT_VEL_INFO=1 --USE_DATA_AUGMENTATION=0 --GAME_TYPE="standard" \
+                         --USE_BLACK_WHITE=0 --IS_HIGH_RES=0 --HIGH_DIFFICULTY=0 --nframeskip=1 \
+                         --use_news=1 --lambda=0.95 --gamma=0.999 --nepochs=3 --nminibatches=8 \
+                         --lr_lambda=1 --lr=5e-4 --cliprange_lambda=1 --cliprange=0.2 \
+                         --norm_obs=0 --norm_adv=1 --norm_rew=0 --clip_rew=0 --ent_coeff=0.01 \
+                         --vf_coef=0.5 --max_grad_norm=0.5 --num_timesteps=256000000 \
+                         --early_final=256000000 \
+                         --jacobian_loss=0 --beta_jacobian_loss=0.0 --tol_jacobian_loss=0.0 \
+                         --entity_loss=0 --beta_entity_loss=0.0 --tol_entity_loss=0.0 \
+                         --nsteps=256 \
+                         --input_shape="64x64" --perception="nature_cnn" --feat_spec="feat_rss_v0" \
+                         --policy_spec="cr_fc_v0" --activation="relu" \
+                         --layernormalize=0 --batchnormalize=0 \
+                         --attention=0 --recurrent=0 \
+                         --add_noise=0 \
+                         --save_interval=1000 --save_dir="./save_dir" --log_dir="./log_dir" \
+                         --exp_name=$exp_name --evaluation=0
