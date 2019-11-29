@@ -517,7 +517,7 @@ class Trainer(object):
             bufs = np.load(npz_file)
 
             print(bufs['obs'].shape)
-            
+
             # load data
             self.agent.load_ph_bufs(bufs)
 
@@ -571,7 +571,7 @@ class Trainer(object):
                                             alpha=x, beta=y)
                     # end_time = time.time()
                     # print('one iteration takes: {}'.format(end_time-start_time))
-                    zs[i, j] = z
+                    zs[i, j] = np.max(z, 1.0)
             xs, ys = np.meshgrid(xs, ys)
             
             npz_save_file = os.path.join(surface_dir, 'surface-{}.npz'.format(restore_iter))
