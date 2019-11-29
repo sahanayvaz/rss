@@ -508,7 +508,7 @@ class Trainer(object):
 
         var_dict = {}
         dir_dict = {0: {}, 1: {}}
-        temp_r_dir = None
+        temp_r_dict = {0: {}, 1: {}}
 
         for restore_iter in range(0, 1500, 300):
             print('restore_iter: {}'.format(restore_iter))
@@ -538,10 +538,9 @@ class Trainer(object):
                         if not r_dir_taken:
                             r_dir = np.random.normal(size=var_shape)
                             dir_dict[i][var_ckpt[0]] = r_dir
+                            temp_dir_dict[i][var_ckpt[0]] = r_dir
                         else:
                             r_dir = dir_dict[i][var_ckpt[0]]
-
-                        temp_r_dir = np.copy(r_dir)
 
                         # this means convolution
                         if len(var_shape) > 3:
@@ -550,11 +549,11 @@ class Trainer(object):
                             for ind in range(num_filter):
                                 fro_weight = np.linalg.norm(var[:, :, :, ind])
                                 fro_dir = np.linalg.norm(r_dir[:, :, :, ind])
-                                temp_r_dir[:, :, :, ind] = (r_dir[:, :, :, ind] / fro_dir) * fro_weight
+                                temp_r_dict[:, :, :, ind] = (r_dir[:, :, :, ind] / fro_dir) * fro_weight
                         else:
                             fro_weight = np.linalg.norm(var)
                             fro_dir = np.linalg.norm(r_dir)
-                            temp_r_dir = (r_dir / fro_dir) * fro_weight
+                            temp_r_dict = (r_dir / fro_dir) * fro_weight
             r_dir_taken = True
 
             print('done creating directions')
@@ -567,11 +566,11 @@ class Trainer(object):
             for i, x in enumerate(xs):
                 for j, y in enumerate(ys):
                     # start_time = time.time()
-                    z = self.agent.get_loss(v_dict=var_dict, dir_dict=temp_r_dir,
+                    z = self.agent.get_loss(v_dict=var_dict, dir_dict=temp_r_dict,
                                             alpha=x, beta=y)
                     # end_time = time.time()
                     # print('one iteration takes: {}'.format(end_time-start_time))
-                    zs[i, j] = np.max(z, 1.0)
+                    zs[i, j] = np.clip(z, -1.0, 1.0)
             xs, ys = np.meshgrid(xs, ys)
             
             npz_save_file = os.path.join(surface_dir, 'surface-{}.npz'.format(restore_iter))
