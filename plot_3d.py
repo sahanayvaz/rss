@@ -4,7 +4,8 @@ from mpl_toolkits.mplot3d import Axes3D
 from matplotlib import cm
 import os
 
-exp_dir = ['./LEO-vis_dir/MARIO-3-1-baseline-v0/']
+#exp_dir = ['./LEO-vis_dir/MARIO-3-1-baseline-v0/']
+exp_dir = ['./save_dir/MARIO-1-1-baseline-v0/surface_plots/']
 
 for e in exp_dir:
     for restore_iter in range(0, 1000, 200):

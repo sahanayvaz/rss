@@ -508,9 +508,10 @@ class Trainer(object):
 
         var_dict = {}
         dir_dict = {0: {}, 1: {}}
-        temp_r_dict = {0: {}, 1: {}}
-
+        # temp_r_dict = {0: {}, 1: {}}
         for restore_iter in range(0, 1500, 300):
+            temp_r_dict = {0: {}, 1: {}}
+        
             print('restore_iter: {}'.format(restore_iter))
 
             npz_file = '{}/extra-{}.npz'.format(self.args['save_dir'], restore_iter)
@@ -538,9 +539,9 @@ class Trainer(object):
                         if not r_dir_taken:
                             r_dir = np.random.normal(size=var_shape)
                             dir_dict[i][var_ckpt[0]] = r_dir
-                            temp_r_dict[i][var_ckpt[0]] = r_dir
+                            # temp_r_dict[i][var_ckpt[0]] = r_dir
                         else:
-                            r_dir = dir_dict[i][var_ckpt[0]]
+                            r_dir = np.copy(dir_dict[i][var_ckpt[0]])
 
                         # this means convolution
                         if len(var_shape) > 3:
@@ -549,18 +550,19 @@ class Trainer(object):
                             for ind in range(num_filter):
                                 fro_weight = np.linalg.norm(var[:, :, :, ind])
                                 fro_dir = np.linalg.norm(r_dir[:, :, :, ind])
-                                temp_r_dict[:, :, :, ind] = (r_dir[:, :, :, ind] / fro_dir) * fro_weight
+                                r_dir[:, :, :, ind] = (r_dir[:, :, :, ind] / fro_dir) * fro_weight
                         else:
                             fro_weight = np.linalg.norm(var)
                             fro_dir = np.linalg.norm(r_dir)
-                            temp_r_dict = (r_dir / fro_dir) * fro_weight
+                            r_dir = (r_dir / fro_dir) * fro_weight
+                        temp_r_dict[i][var_ckpt[0]] = r_dir
             r_dir_taken = True
 
             print('done creating directions')
 
             print('getting losses')
-            xs = np.arange(-10.0, 10.0, 1.0)
-            ys = np.arange(-10.0, 10.0, 1.0)
+            xs = np.arange(-1.0, 1.0, 0.1)
+            ys = np.arange(-1.0, 1.0, 0.1)
             zs = np.zeros((xs.shape[0], ys.shape[0]))
             
             for i, x in enumerate(xs):
