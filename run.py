@@ -567,7 +567,7 @@ class Trainer(object):
             for i, x in enumerate(xs):
                 for j, y in enumerate(ys):
                     # start_time = time.time()
-                    z = self.agent.get_loss(v_dict=var_dict, dir_dict=temp_dir_dict,
+                    z = self.agent.get_loss(v_dict=var_dict, dir_dict=temp_r_dir,
                                             alpha=x, beta=y)
                     # end_time = time.time()
                     # print('one iteration takes: {}'.format(end_time-start_time))
