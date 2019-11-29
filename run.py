@@ -505,7 +505,8 @@ class Trainer(object):
 
         surface_dir = os.path.join(self.args['save_dir'], 'surface_plots')
         os.makedirs(surface_dir, exist_ok=True)
-        for restore_iter in range(0, 1400, 100):
+
+        for restore_iter in range(0, 1500, 200):
             print('restore_iter: {}'.format(restore_iter))
 
             npz_file = '{}/extra-{}.npz'.format(self.args['save_dir'], restore_iter)
