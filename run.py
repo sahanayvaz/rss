@@ -506,6 +506,9 @@ class Trainer(object):
         surface_dir = os.path.join(self.args['save_dir'], 'surface_plots')
         os.makedirs(surface_dir, exist_ok=True)
 
+        var_dict = {}
+        dir_dict = {0: {}, 1: {}}
+
         for restore_iter in range(0, 1500, 200):
             print('restore_iter: {}'.format(restore_iter))
 
@@ -514,9 +517,6 @@ class Trainer(object):
 
             # load data
             self.agent.load_ph_bufs(bufs)
-
-            var_dict = {}
-            dir_dict = {0: {}, 1: {}}
 
             # we create r_dir only once
             load_path = os.path.join(self.args['save_dir'], 'model-{}'.format(restore_iter))
