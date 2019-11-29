@@ -518,7 +518,7 @@ class Trainer(object):
             dir_dict = {0: {}, 1: {}}
 
             # we create r_dir only once
-            load_path = os.path.join(self.load_dir, 'model-{}'.format(self.restore_iter))
+            load_path = os.path.join(self.args['save_dir'], 'model-{}'.format(self.restore_iter))
 
             for var_ckpt in tf.train.list_variables(load_path):
                 # remove learning-related variables
