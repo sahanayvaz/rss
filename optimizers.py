@@ -221,7 +221,7 @@ class PPO(object):
 
                 ''')
 
-            for i, g in enumerate(grads[start_idx:]):
+            for i, g in enumerate(grads[start_idx:end_idx]):
                 print('g: {}'.format(g))
                 sparse_idx = self.policy.random_idx[i]
                 full_dim = self.policy.full_dim[i]
