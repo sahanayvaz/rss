@@ -508,13 +508,16 @@ class Trainer(object):
 
         var_dict = {}
         dir_dict = {0: {}, 1: {}}
+        temp_r_dir = None
 
-        for restore_iter in range(0, 1500, 200):
+        for restore_iter in range(0, 1500, 300):
             print('restore_iter: {}'.format(restore_iter))
 
             npz_file = '{}/extra-{}.npz'.format(self.args['save_dir'], restore_iter)
             bufs = np.load(npz_file)
 
+            print(bufs['obs'].shape)
+            
             # load data
             self.agent.load_ph_bufs(bufs)
 
@@ -524,7 +527,7 @@ class Trainer(object):
             for var_ckpt in tf.train.list_variables(load_path):
                 # remove learning-related variables
                 # we are also ignoring biases
-                not_count = 'beta' in var_ckpt[0] or 'Adam' in var_ckpt[0] or 'bias' in var_ckpt[0]
+                not_count = 'beta' in var_ckpt[0] or 'Adam' in var_ckpt[0]
                 if not not_count:
                     # this gives the shapes of variables
                     var_shape = var_ckpt[1]
@@ -557,14 +560,14 @@ class Trainer(object):
             print('done creating directions')
 
             print('getting losses')
-            xs = np.arange(-1, 1, 0.1)
-            ys = np.arange(-1, 1, 0.1)
+            xs = np.arange(-10.0, 10.0, 1.0)
+            ys = np.arange(-10.0, 10.0, 1.0)
             zs = np.zeros((xs.shape[0], ys.shape[0]))
             
             for i, x in enumerate(xs):
                 for j, y in enumerate(ys):
                     # start_time = time.time()
-                    z = self.agent.get_loss(v_dict=var_dict, dir_dict=dir_dict,
+                    z = self.agent.get_loss(v_dict=var_dict, dir_dict=temp_dir_dict,
                                             alpha=x, beta=y)
                     # end_time = time.time()
                     # print('one iteration takes: {}'.format(end_time-start_time))
@@ -584,7 +587,7 @@ class Trainer(object):
             ax = plt.axes(projection='3d')
 
             ax.plot_surface(xs, ys, zs, cmap=cm.coolwarm, edgecolor='none')
-            ax.set_title('loss-surface-{}'.format(self.restore_iter))
+            ax.set_title('loss-surface-{}'.format(restore_iter))
             plt.show()
             '''
 ###
