@@ -23,6 +23,8 @@ import time
 import matplotlib.pyplot as plt
 import sys
 import shutil
+from mpl_toolkits.mplot3d import Axes3D
+from matplotlib import cm
 
 import warnings
 
@@ -53,11 +55,15 @@ def start_experiment(**args):
         # create trainer
         trainer = Trainer(env=env, test_env=test_env, args=args)
 
-        if args['evaluation']:
+        if args['evaluation'] == 1:
             # load_path is changed to model_path
             print('run.py, def start_experiment, evaluating model: {}'.format(args['load_path']))
             trainer.eval()
 
+        # this is for visualizing the loss landscape
+        elif args['visualize'] == 1:
+            print('running visualization...')
+            trainer.visualize()
         else:
             print('run.py, def start_experiment, training begins...')
             trainer.train()
@@ -229,7 +235,7 @@ class Trainer(object):
         self.restore_iter = self.args['restore_iter']
         self.load_path = None
         if self.restore_iter > -1:
-            load_dir = self.args['save_dir']
+            self.load_dir = self.args['save_dir']
             if args['transfer_load']:
                 print('''
 
@@ -238,8 +244,8 @@ class Trainer(object):
 
 
                     ''')
-                load_dir = self.args['load_dir']
-            self.load_path = os.path.join(self.args['load_dir'], 'model-{}'.format(self.restore_iter))
+                self.load_dir = self.args['load_dir']
+            self.load_path = os.path.join(self.load_dir, 'model-{}'.format(self.restore_iter))
 
         print('''
 
@@ -493,6 +499,93 @@ class Trainer(object):
             out.release()
         '''
 
+    def visualize(self):
+
+        r_dir_taken = False
+
+        surface_dir = os.path.join(self.args['save_dir'], 'surface_plots')
+        os.makedirs(surface_dir, exist_ok=True)
+        for restore_iter in range(0, 1400, 100):
+            print('restore_iter: {}'.format(restore_iter))
+
+            npz_file = '{}/extra-{}.npz'.format(self.load_dir, restore_iter)
+            bufs = np.load(npz_file)
+
+            # load data
+            self.agent.load_ph_bufs(bufs)
+
+            var_dict = {}
+            dir_dict = {0: {}, 1: {}}
+
+            # we create r_dir only once
+            load_path = os.path.join(self.load_dir, 'model-{}'.format(self.restore_iter))
+
+            for var_ckpt in tf.train.list_variables(load_path):
+                # remove learning-related variables
+                # we are also ignoring biases
+                not_count = 'beta' in var_ckpt[0] or 'Adam' in var_ckpt[0] or 'bias' in var_ckpt[0]
+                if not not_count:
+                    # this gives the shapes of variables
+                    var_shape = var_ckpt[1]
+                    var = tf.train.load_variable(load_path, var_ckpt[0])                    
+                    var_dict[var_ckpt[0]] = var
+
+                    for i in range(2):
+                        if not r_dir_taken:
+                            r_dir = np.random.normal(size=var_shape)
+                            dir_dict[i][var_ckpt[0]] = r_dir
+                        else:
+                            r_dir = dir_dict[i][var_ckpt[0]]
+
+                        temp_r_dir = np.copy(r_dir)
+
+                        # this means convolution
+                        if len(var_shape) > 3:
+                            # normalize cnns
+                            num_filter = var_shape[-1]
+                            for ind in range(num_filter):
+                                fro_weight = np.linalg.norm(var[:, :, :, ind])
+                                fro_dir = np.linalg.norm(r_dir[:, :, :, ind])
+                                temp_r_dir[:, :, :, ind] = (r_dir[:, :, :, ind] / fro_dir) * fro_weight
+                        else:
+                            fro_weight = np.linalg.norm(var)
+                            fro_dir = np.linalg.norm(r_dir)
+                            temp_r_dir = (r_dir / fro_dir) * fro_weight
+            r_dir_taken = True
+
+            print('done creating directions')
+
+            print('getting losses')
+            xs = np.arange(-1, 1, 0.1)
+            ys = np.arange(-1, 1, 0.1)
+            zs = np.zeros((xs.shape[0], ys.shape[0]))
+            
+            for i, x in enumerate(xs):
+                for j, y in enumerate(ys):
+                    # start_time = time.time()
+                    z = self.agent.get_loss(v_dict=var_dict, dir_dict=dir_dict,
+                                            alpha=x, beta=y)
+                    # end_time = time.time()
+                    # print('one iteration takes: {}'.format(end_time-start_time))
+                    zs[i, j] = z
+            xs, ys = np.meshgrid(xs, ys)
+            
+            npz_save_file = os.path.join(surface_dir, 'surface-{}.npz'.format(restore_iter))
+            np.savez_compressed(npz_save_file,
+                                xs=xs,
+                                ys=ys,
+                                zs=zs)
+
+            '''
+            print('surface projections...')
+
+            fig = plt.figure()
+            ax = plt.axes(projection='3d')
+
+            ax.plot_surface(xs, ys, zs, cmap=cm.coolwarm, edgecolor='none')
+            ax.set_title('loss-surface-{}'.format(self.restore_iter))
+            plt.show()
+            '''
 ###
 # MAIN
 ###
@@ -504,6 +597,7 @@ if __name__ == '__main__':
     parser.add_argument('--model_spec', type=str, default='')
     parser.add_argument('--restore_iter', type=int, default=-1)
     parser.add_argument('--server_type', type=str, default='local')
+    parser.add_argument('--visualize', type=int, default=0)
     args = parser.parse_args()
 
     with open(args.model_spec, 'r') as file:
@@ -517,4 +611,6 @@ if __name__ == '__main__':
 
     train_args['restore_iter'] = args.restore_iter
     train_args['server_type'] = args.server_type
+    train_args['visualize'] = args.visualize
+
     start_experiment(**train_args)

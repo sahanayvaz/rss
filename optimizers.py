@@ -409,6 +409,35 @@ class PPO(object):
                     if self.freeze_weights:
                        trainable_variables.remove(t)
 
+    # load buffers
+    def load_ph_bufs(self, bufs):
+        self.load_fd = {self.policy.ph_ob: bufs['obs'],
+                        self.policy.ph_ac: bufs['acs'],
+                        self.ph_oldvpred: bufs['oldvpreds'],
+                        self.ph_oldnlp: bufs['nlps'],
+                        self.ph_ret: bufs['rets'],
+                        self.ph_adv: bufs['advs'],
+                        self.ph_lr: 0.0,
+                        self.ph_cliprange: bufs['cliprange']}
+
+    # write everything to here, because ckpt contains adam variables too
+    def variable_assignment(self, load_ckpt):
+        trainable_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+
+    # instead of restore, we use this to quickly update our variables
+    def _assign_op(self, v_dict, dir_dict, alpha, beta):
+        trainable_variables = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES)
+        assign_op = []
+        for k in v_dict.keys():
+            for t in trainable_variables:
+                if k == t.op.name:
+                    assign_op.append(tf.assign(t, v_dict[t.op.name] + alpha * dir_dict[0][t.op.name] + beta * dir_dict[1][t.op.name]))
+        return sess().run(assign_op)
+
+    def get_loss(self, v_dict, dir_dict, alpha, beta):
+        self._assign_op(v_dict, dir_dict, alpha, beta)
+        return sess().run(self.policy_loss, feed_dict=self.load_fd)
+
     def load(self, load_path):
         self.saver.restore(sess(), load_path)
         print('loaded already trained model from {}'.format(load_path))
