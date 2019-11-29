@@ -508,7 +508,7 @@ class Trainer(object):
         for restore_iter in range(0, 1400, 100):
             print('restore_iter: {}'.format(restore_iter))
 
-            npz_file = '{}/extra-{}.npz'.format(self.load_dir, restore_iter)
+            npz_file = '{}/extra-{}.npz'.format(self.args['save_dir'], restore_iter)
             bufs = np.load(npz_file)
 
             # load data
