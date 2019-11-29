@@ -538,7 +538,7 @@ class Trainer(object):
                         if not r_dir_taken:
                             r_dir = np.random.normal(size=var_shape)
                             dir_dict[i][var_ckpt[0]] = r_dir
-                            temp_dir_dict[i][var_ckpt[0]] = r_dir
+                            temp_r_dict[i][var_ckpt[0]] = r_dir
                         else:
                             r_dir = dir_dict[i][var_ckpt[0]]
 
