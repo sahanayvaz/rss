@@ -53,23 +53,6 @@ def add_optimization_params(parser):
     parser.add_argument('--num_timesteps', type=int, default=int(128e6))
     parser.add_argument('--early_final', type=int, default=int(128e6))
 
-    # extra losses
-    # 0: None, 1: only frobenius penalty,
-    # 2: spatial, 3: spatial separate policy and representation training
-    # 4: spatial with cosine separate policy and representation training
-    parser.add_argument('--jacobian_loss', type=int, default=0)
-    parser.add_argument('--beta_jacobian_loss', type=float, default=0.0)
-    parser.add_argument('--tol_jacobian_loss', type=float, default=0.0)
-
-    ## entity loss experiments will be added LATER
-    # 0: None, 1: l2-loss, 2: cos_distance
-    parser.add_argument('--entity_loss', type=int, default=0)
-    parser.add_argument('--entity_randomness', type=str, default='v0')
-    parser.add_argument('--beta_entity_loss', type=float, default=0.0)
-    parser.add_argument('--tol_entity_loss', type=float, default=0.0)
-    parser.add_argument('--num_repeat', type=int, default=4)
-    parser.add_argument('--num_replace_ratio', type=int, default=2)
-
 def add_rollout_params(parser):
     # rollout related params
     # the original coinrun uses 32 environments per works with 256 timesteps per env
@@ -92,19 +75,10 @@ def add_network_params(parser):
     parser.add_argument('--layernormalize', type=int, default=0)
     parser.add_argument('--batchnormalize', type=int, default=0)
 
-    # attention
-    parser.add_argument('--attention', type=int, default=0)
-    parser.add_argument('--reduce_max', type=int, default=0)
-
-    parser.add_argument('--dropout_attention', type=int, default=0)
-
-    # recurrent
-    # we did not implement LSTM yet
-    parser.add_argument('--recurrent', type=int, default=0)
-
+    # sparsity-related parameters
     parser.add_argument('--add_noise', type=int, default=0)
     parser.add_argument('--keep_noise', type=int, default=0)
-    parser.add_argument('--noise_std', type=float, default=1.0)
+    parser.add_argument('--noise_std', type=float, default=0.0)
     parser.add_argument('--num_layers', type=int, default=2)
     parser.add_argument('--keep_dim', type=int, default=30)
     
@@ -131,29 +105,16 @@ if __name__ == '__main__':
 
     ## evaluation
     parser.add_argument('--exp_name', type=str, default='m000')
+    parser.add_argument('--specs_dir', type=str, default='./model_specs')
     parser.add_argument('--evaluation', type=int, default=0)
     parser.add_argument('--for_visuals', type=int, default=0)
+
+    # in this way i can re-run experiments with different seeds
+    parser.add_argument('--seed', type=int, default=0)
+
     args = parser.parse_args()
 
-    if args.jacobian_loss:
-        assert args.beta_jacobian_loss > 0.0
-        # assert args.tol_jacobian_loss > 0.0
-        
-    if args.entity_loss:
-        assert args.beta_entity_loss > 0.0
-        assert args.tol_entity_loss > 0.0
-
     exp_name = args.exp_name
-
-    '''
-    exp_name = 'env-{}_shape-{}_cnn-{}_fc-{}_jc-{}-{}-{}-{}_att-{}_ent-{}-{}_seed-{}'.format(
-                args.env_kind, args.input_shape, 
-                args.perception, args.policy_spec, 
-                args.jacobian_loss, args.beta_jacobian_loss, args.tol_jacobian_loss, args.nparticles,
-                args.attention,
-                args.entity_loss, args.beta_entity_loss,
-                args.SET_SEED)
-    '''
 
     args.save_dir = os.path.join(args.save_dir, exp_name)
     args.log_dir = os.path.join(args.log_dir, exp_name)
@@ -161,9 +122,7 @@ if __name__ == '__main__':
     if args.load_dir is None:
         args.load_dir = args.save_dir
 
-    model_spec_dir = './model_specs'
-    print(args.log_dir)
-    print(args.save_dir)
+    model_spec_dir = args.specs_dir
     os.makedirs(model_spec_dir, exist_ok=True)
     
     model_spec = os.path.join(model_spec_dir, '{}.json'.format(exp_name))
@@ -171,4 +130,4 @@ if __name__ == '__main__':
     with open(model_spec, 'w') as file:
         json.dump(vars(args), file)
 
-    print('model_spec is dumped to: {}'.format(model_spec))
+    print(model_spec)

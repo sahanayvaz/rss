@@ -110,6 +110,7 @@ def make_mario_env(env_id, frameskip, rank, seed=0):
 
 def make_mario_vec_env(env_id, nenvs, frameskip, start_method):
     from stable_baselines.common.vec_env import SubprocVecEnv
+    '''
     if env_id == "SuperMarioBros-M4-1-v0":
         env_id = [1, 2]
         env = SubprocVecEnv(env_fns=[make_mario_env(env_id[i % 2], frameskip, i)  for i in range(nenvs)],
@@ -117,4 +118,7 @@ def make_mario_vec_env(env_id, nenvs, frameskip, start_method):
     else:
         env = SubprocVecEnv(env_fns=[make_mario_env(env_id, frameskip, i)  for i in range(nenvs)],
                             start_method=start_method)
+    '''
+    env = SubprocVecEnv(env_fns=[make_mario_env(env_id, frameskip, i)  for i in range(nenvs)],
+                        start_method=start_method)
     return env

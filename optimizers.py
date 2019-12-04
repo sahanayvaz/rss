@@ -15,19 +15,11 @@ sess = tf.get_default_session
 
 class PPO(object):
     def __init__(self, scope, env, test_env, nenvs, save_dir, log_dir, 
-                 policy, 
-                 use_news, recurrent, gamma, lam,
+                 policy, use_news, gamma, lam,
                  nepochs, nminibatches, nsteps, vf_coef,
                  ent_coef, max_grad_norm, 
                  normrew, cliprew, normadv,
-                 jacobian_loss, nparticles,
-                 entity_loss, nentities_per_batch, entity_randomness,
-                 for_visuals,
-                 transfer_load=False, load_path=None, freeze_weights=False):
-        
-        # for now we do not have recurrent implementation
-        if recurrent:
-            raise NotImplementedError()
+                 for_visuals, transfer_load=False, load_path=None, freeze_weights=False):
         
         self.save_dir = save_dir
         self.log_dir = log_dir
@@ -52,10 +44,6 @@ class PPO(object):
             self.nenvs = nenvs
 
             self.policy = policy
-            
-            # recurrent
-            self.recurrent = recurrent
-
             self.for_visuals = for_visuals
 
             # use_news
@@ -75,44 +63,21 @@ class PPO(object):
             # nsteps = number of timesteps per rollout per environment
             self.nsteps = nsteps
 
-            ## EXTRA LOSSES
-            self.jacobian_loss = jacobian_loss
-            self.ph_beta_jacobian_loss = tf.placeholder(tf.float32, [])
-
-            # number of random variables to approximate expectation
-            self.nparticles = nparticles 
-            
-            self.entity_loss = entity_loss
-            self.ph_beta_entity_loss = tf.placeholder(tf.float32, [])
-            self.nentities_per_batch = nentities_per_batch
-            self.entity_randomness = entity_randomness
-            print('''
-
-                entity_randomness: {}
-
-                '''.format(entity_randomness))
-
             # placeholders
             self.ph_adv = tf.placeholder(tf.float32, [None])
             # ret = advs + vpreds, R = ph_ret
-
             self.ph_ret = tf.placeholder(tf.float32, [None])
-            # no need for ph_rews
-            # self.ph_rews = tf.placeholder(tf.float32, [None])
             self.ph_oldnlp = tf.placeholder(tf.float32, [None])
             self.ph_oldvpred = tf.placeholder(tf.float32, [None])
 
             self.ph_lr = tf.placeholder(tf.float32, [])
-            # tf.summary.scalar('lr', self.ph_lr)
 
             self.ph_cliprange = tf.placeholder(tf.float32, [])
-            # tf.summary.scalar('cliprange', self.ph_cliprange)
 
             neglogpac = self.policy.pd.neglogp(self.policy.ph_ac)
             
             ## add to summary
             entropy = tf.reduce_mean(self.policy.pd.entropy())
-            # tf.summary.scalar('entropy', entropy)
 
             # clipped vpred, same as coinrun
             vpred = self.policy.vpred
@@ -122,7 +87,6 @@ class PPO(object):
 
             ## add to summary
             vf_loss = vf_coef * (0.5 * tf.reduce_mean(tf.maximum(vf_losses1, vf_losses2)))
-            # tf.summary.scalar('vf_loss', vf_loss)
 
             ratio = tf.exp(self.ph_oldnlp - neglogpac)
             negadv = -self.ph_adv
@@ -132,25 +96,17 @@ class PPO(object):
             
             ## add to summary
             pg_loss = tf.reduce_mean(pg_loss_surr)
-            # tf.summary.scalar('pg_loss', pg_loss)
             
             ent_loss = (-ent_coef) * entropy
-            # tf.summary.scalar('ent_loss', ent_loss)
             
             ## add to summary
             approxkl = 0.5 * tf.reduce_mean(tf.square(neglogpac - self.ph_oldnlp))
-            # tf.summary.scalar('approxkl', approxkl)
             
             ## add to summary
             clipfrac = tf.reduce_mean(tf.to_float(tf.abs(pg_losses2 - pg_loss_surr) > 1e-6))
-            # tf.summary.scalar('clipfrac', clipfrac)
             
             ## add to summary
             self.policy_loss = pg_loss + ent_loss + vf_loss
-            # self.rep_loss = self.policy_loss
-
-            # self.total_loss = self.policy_loss
-            # tf.summary.scalar('total_loss', self.policy_loss)
 
             # set summaries
             self.to_report = {'policy_loss': self.policy_loss,
@@ -202,27 +158,27 @@ class PPO(object):
                 end_idx = -6
             elif self.policy.policy_spec == 'cr_fc_v0':
                 end_idx = -4
+
+            # i do not want to worry about 'full_sparsity' at the moment
+            # full sparsity is a must though (if i want to use this for gradient predictions)
             elif self.policy.policy_spec == 'full_sparse':
-                end_idx = None
-                special_idx = -16
+                end_idx = 0
             else:
                 raise NotImplementedError()
             
+            # we changed this because of completely sparse training from + 0 to + 2
             sum_get = [(i+1) for i in range(self.policy.num_layers)]
-            mult = np.sum(sum_get)
-            start_idx = end_idx - (mult * 2) if end_idx is not None else special_idx
+            mult = np.sum(sum_get) + 2 * (sum_get[-1] + 1)
+            start_idx = end_idx - (mult * 2)
 
+            '''
             print('start_idx: {} and end_idx: {}'.format(start_idx, end_idx))
             for g in grads:
                 print(g)
-
-            print('''
-
-
-                ''')
-
-            for i, g in enumerate(grads[start_idx:end_idx]):
-                print('g: {}'.format(g))
+            '''
+            
+            for i, g in enumerate(grads[start_idx:]):
+                # print('g: {}'.format(g))
                 sparse_idx = self.policy.random_idx[i]
                 full_dim = self.policy.full_dim[i]
                 mult_conts = np.zeros(full_dim, dtype=np.float32)
@@ -275,7 +231,7 @@ class PPO(object):
             self.buf_advs[:, t] = lastgaelam = delta + gamma * lam * nextnotnew * lastgaelam
         self.buf_rets[:] = self.buf_advs + self.runner.buf_vpreds
 
-    def update(self, rep_train, lr, cliprange, beta_jacobian_loss, tol_jacobian_loss, beta_entity_loss):
+    def update(self, lr, cliprange):
         # fill rollout buffers
         self.runner.rollout()
 
@@ -369,11 +325,6 @@ class PPO(object):
             return x.reshape(sh[0] * sh[1], *sh[2:])
 
         if self.for_visuals:
-            # self.ph_ret = tf.placeholder(tf.float32, [None])
-            # self.ph_oldvpred = tf.placeholder(tf.float32, [None])
-            # (self.ph_oldvpred, f01(self.runner.buf_vpreds)),
-            # (self.ph_ret, f01(self.buf_rets)),
-
             obs = f01(self.runner.buf_obs)            
             acs = f01(self.runner.buf_acs)
             nlps = f01(self.runner.buf_nlps)
@@ -438,6 +389,64 @@ class PPO(object):
         self._assign_op(v_dict, dir_dict, alpha, beta)
         return sess().run(self.policy_loss, feed_dict=self.load_fd)
 
+    def re_run_loss(self, v_dict, dir_dict, alpha, beta, bufs):
+        self._assign_op(v_dict, dir_dict, alpha, beta)
+        self.runner.rollout()
+
+        ## TODO: normalized rewards
+        # coinrun does NOT normalize its rewards
+        if self.normrew:
+            rffs = np.array([self.rff.update(rew) for rew in self.runner.buf_rews.T])
+            # print('optimizers.py, class PPO, def update, rffs.shape: {}'.format(rffs.shape))
+            rffs_mean, rffs_std, rffs_count = utils.get_moments(rffs.ravel())
+            self.rff_rms.update_from_moments(rffs_mean, rffs_std ** 2, rffs_count)
+            rews = self.runner.buf_rews / np.sqrt(self.rff_rms.var)
+        else:
+            rews = np.copy(self.runner.buf_rews)
+
+        self.calculate_advantages(rews=rews, use_news=self.use_news, 
+                                  gamma=self.gamma, lam=self.lam)
+
+        # this is a little bit different than the original coinrun implementation
+        # they only normalize advantages using batch mean and std instead of
+        # entire data & we add 1e-7 instead of 1e-8
+        if self.normadv:
+            mean, std = np.mean(self.buf_advs), np.std(self.buf_advs)
+            self.buf_advs = (self.buf_advs - mean) / (std + 1e-7)
+
+        def f01(x):
+            sh = x.shape
+            return x.reshape(sh[0] * sh[1], *sh[2:])
+        flattened_obs = f01(self.runner.buf_obs)
+
+        ph_buf = {self.policy.ph_ob: flattened_obs,
+                  self.policy.ph_ac: bufs['acs'],
+                  self.ph_oldvpred: f01(self.runner.buf_vpreds),
+                  self.ph_oldnlp: f01(self.runner.buf_nlps),
+                  self.ph_ret: f01(self.buf_rets),
+                  self.ph_adv: f01(self.buf_advs),
+                  self.ph_lr: 0.0,
+                  self.ph_cliprange: bufs['cliprange']}
+
+        return sess().run(self.policy_loss, feed_dict=ph_buf)
+    
     def load(self, load_path):
+
+        print('''
+
+            load variables
+
+            ''')
+        for variable in tf.train.list_variables(load_path):
+            print(variable[0])
+
+        print('''
+
+            global variables
+
+            ''')
+        for variable in tf.global_variables():
+            print(variable.name)
+
         self.saver.restore(sess(), load_path)
         print('loaded already trained model from {}'.format(load_path))

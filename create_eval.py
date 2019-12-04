@@ -8,6 +8,7 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     
     parser.add_argument('--train_config', type=str, default=None)
+    parser.add_argument('--divisor', type=int, default=2500)
     args = parser.parse_args()
 
     with open(args.train_config, 'r') as file:
@@ -19,7 +20,8 @@ if __name__ == '__main__':
 
     load_iter = []
     for l in iter_all:
-        if (l % 2500 == 0):
+        # i do not want the 0th model
+        if (l % args.divisor == 0) and (l != 0):
             load_iter.append(l)
 
     load_iter.sort()

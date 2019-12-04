@@ -36,7 +36,7 @@ def start_experiment(**args):
     env, test_env = make_env_all_params(args=args)
 
     # set random seeds for reproducibility
-    utils.set_global_seeds()
+    utils.set_global_seeds(seed=args['seed'])
 
     # create tf.session
     tf_sess = utils.setup_tensorflow_session()
@@ -139,23 +139,6 @@ class Trainer(object):
 
         coinrun = 1 if self.args['env_kind'] == 'coinrun' else 0
 
-        # add nentities_per_batch to create_config: nentities_per_batch are the number of sample (base)
-        # entities to do comparison
-
-        # nentities_per_batch should be calculated automatically
-        nentities_per_state = utils.get_nentities_per_state(self.ob_space.shape, args['attention'])
-        print('nentities_per_state: {}'.format(nentities_per_state))
-
-        # let's decrease the number
-        # this is how we defined it in policy.py
-        # args['nsteps'] * args['NUM_ENVS'] is the batch size
-        # this way we could just shuffle E and then re-feed
-        nentities_per_batch = args['nsteps'] * args['NUM_ENVS'] * nentities_per_state // 4
-        print('nentities_per_batch: {}'.format(nentities_per_batch))
-
-        # i think i should also change nparticles to
-        nparticles = args['nsteps'] // 2
-
         self.policy = Policy(scope='policy',
                              ob_space=self.ob_space,
                              ac_space=self.ac_space,
@@ -167,21 +150,8 @@ class Trainer(object):
                              activation=args['activation'],
                              layernormalize=args['layernormalize'],
                              batchnormalize=args['batchnormalize'],
-                             attention=args['attention'],
-                             reduce_max=args['reduce_max'],
-                             dropout_attention=args['dropout_attention'],
-                             recurrent=args['recurrent'],
-                             jacobian_loss=args['jacobian_loss'],
-                             nparticles=nparticles,
-                             entity_loss=args['entity_loss'],
-                             entity_randomness=args['entity_randomness'],
-                             tol_entity_loss=args['tol_entity_loss'],
-                             nentities_per_state=nentities_per_state,
-                             nentities_per_batch=nentities_per_batch,
                              vf_coef=args['vf_coef'],
                              coinrun=coinrun,
-                             num_repeat=args['num_repeat'],
-                             num_replace_ratio=args['num_replace_ratio'],
                              add_noise=args['add_noise'],
                              keep_noise=args['keep_noise'],
                              noise_std=args['noise_std'],
@@ -190,7 +160,6 @@ class Trainer(object):
                              keep_dim=args['keep_dim'])
 
         # cliprange will be annealed (was 0.1 for mario experiments)
-        
         # linear annealing for learning rate
         lr = args['lr']
         if args['lr_lambda']:
@@ -220,13 +189,6 @@ class Trainer(object):
         if isinstance(cliprange, float): cliprange = utils.constfn(cliprange)
         else: assert callable(cliprange)
         self.cliprange = cliprange
-
-        # added beta jacobian loss annealing
-        self.beta_jacobian_loss = lambda f: f * args['beta_jacobian_loss']
-        self.tol_jacobian_loss = lambda f: f * args['tol_jacobian_loss']
-
-        self.beta_entity_loss = lambda f: f * args['beta_entity_loss']
-        self.tol_jacobian_loss = lambda f: f * args['tol_jacobian_loss']
 
         # max_grad_norm
         max_grad_norm = args['max_grad_norm']
@@ -262,7 +224,6 @@ class Trainer(object):
                          log_dir=args['log_dir'],
                          policy=self.policy,
                          use_news=args['use_news'],
-                         recurrent=args['recurrent'],
                          gamma=args['gamma'],
                          lam=args["lambda"],
                          nepochs=args['nepochs'],
@@ -274,11 +235,6 @@ class Trainer(object):
                          normrew=args['norm_rew'],
                          cliprew=args['clip_rew'],
                          normadv=args['norm_adv'],
-                         jacobian_loss=args['jacobian_loss'],
-                         nparticles=nparticles,
-                         entity_loss=args['entity_loss'],
-                         entity_randomness=args['entity_randomness'],
-                         nentities_per_batch=nentities_per_batch,
                          for_visuals=args['for_visuals'],
                          transfer_load=args['transfer_load'],
                          load_path=self.load_path,
@@ -366,14 +322,7 @@ class Trainer(object):
             ## linearly annealing
             curr_lr = self.lr(frac)
             curr_cr = self.cliprange(frac)
-            
-            # linear annealing ???
-            curr_beta_jc = self.beta_jacobian_loss(1.0 - frac)
-            curr_tol_jc = self.tol_jacobian_loss(1.0 - frac)
-
-            # linearly increasing penalty
-            curr_beta_entity = self.beta_entity_loss(1.0 - frac)
-            
+                        
             ## removed within training evaluation
             ## i could not make flag_sum to work properly
             ## evaluate each 100 run for 20 training levels
@@ -390,10 +339,7 @@ class Trainer(object):
                     self.result_logger.dumpkvs()
 
             # representation learning in each 25 steps
-            rep_train = ((curr_iter + 1) % 25 == 0)
-            info = self.agent.update(rep_train=rep_train, lr=curr_lr, cliprange=curr_cr, 
-                                     beta_jacobian_loss=curr_beta_jc, tol_jacobian_loss=curr_tol_jc, 
-                                     beta_entity_loss=curr_beta_entity)
+            info = self.agent.update(lr=curr_lr, cliprange=curr_cr)
             end_time = time.time()
 
             # additional info
@@ -420,16 +366,15 @@ class Trainer(object):
 
         self.agent.save(curr_iter, cliprange=curr_cr)
 
-        '''
-        csv_columns = results_list[0].keys()
-        csv_save_path = os.path.join(self.args['log_dir'], '{}-inters.csv'.format(self.args['exp_name']))
-        with open(csv_save_path, 'w') as file:
-            writer = csv.DictWriter(file, fieldnames=csv_columns)
-            writer.writeheader()
-            for data in results_list:
-                writer.writerow(data)
-        print('results are dumped to {}'.format(csv_save_path))
-        '''
+        # final evaluation for mario
+        if self.args['env_kind'] == 'mario':
+            save_video = False
+            nlevels = 20
+            results, _ = self.agent.evaluate(nlevels, save_video)
+            results['iter'] = curr_iter
+            for (k, v) in results.items():
+                self.result_logger.logkv(k, v)
+            self.result_logger.dumpkvs()
 
     def eval(self):
         # create base_dir to save results
@@ -509,7 +454,8 @@ class Trainer(object):
         var_dict = {}
         dir_dict = {0: {}, 1: {}}
         # temp_r_dict = {0: {}, 1: {}}
-        for restore_iter in range(0, 1500, 300):
+        # for restore_iter in range(0, 1500, 300):
+        for restore_iter in [1450]:
             temp_r_dict = {0: {}, 1: {}}
         
             print('restore_iter: {}'.format(restore_iter))
@@ -568,8 +514,13 @@ class Trainer(object):
             for i, x in enumerate(xs):
                 for j, y in enumerate(ys):
                     # start_time = time.time()
+                    '''
                     z = self.agent.get_loss(v_dict=var_dict, dir_dict=temp_r_dict,
                                             alpha=x, beta=y)
+                    '''
+                    z = self.agent.re_run_loss(v_dict=var_dict, dir_dict=temp_r_dict,
+                                               alpha=x, beta=y, bufs=bufs)
+
                     # end_time = time.time()
                     # print('one iteration takes: {}'.format(end_time-start_time))
                     zs[i, j] = np.clip(z, -1.0, 1.0)
