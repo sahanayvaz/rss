@@ -30,10 +30,10 @@ do
                                         --for_visuals=0 \
                                         --seed=$seed\
                                         --save_interval=$save_interval --save_dir=$save_dir --log_dir="./log_dir" \
-                                        --specs_dir='./model_spec'\
+                                        --specs_dir='./model_specs'\
                                         --exp_name=$exp_name --evaluation=0
 
-               exp_path="$HOME/rss/model_spec/$exp_name.json"
+               exp_path="$HOME/rss/model_specs/$exp_name.json"
                bsub -n 16 "python3 run.py --server_type LEONHARD --visualize 0 --model_spec $exp_path"
           done
      done
