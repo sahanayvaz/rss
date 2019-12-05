@@ -171,14 +171,18 @@ class PPO(object):
             mult = np.sum(sum_get) + 2 * (sum_get[-1] + 1)
             start_idx = end_idx - (mult * 2)
 
-            '''
+        
             print('start_idx: {} and end_idx: {}'.format(start_idx, end_idx))
             for g in grads:
                 print(g)
-            '''
-            
+
+            print('''
+
+
+                ''')
+
             for i, g in enumerate(grads[start_idx:]):
-                # print('g: {}'.format(g))
+                print('g: {}'.format(g))
                 sparse_idx = self.policy.random_idx[i]
                 full_dim = self.policy.full_dim[i]
                 mult_conts = np.zeros(full_dim, dtype=np.float32)

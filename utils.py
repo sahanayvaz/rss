@@ -164,21 +164,29 @@ def rss(inpt, feat_dim, activation, keep_dim, num_layers, act_dim,
     random_idx = []
     full_dims = []
 
+    activation = activ(activation)
+
     for n in range(num_layers):
         inter_out = 0.0
         for n_sub in range(n+1):
             layer_name = '_{}_{}'.format((n+1), (n_sub+1))
 
             divisor = (n + 1)
+
             out, r_idx, f_dim = single_rss(inpt=outs[n_sub], feat_dim=feat_dim, activation=activation, 
                                            keep_dim=keep_dim // divisor, add_noise=add_noise, 
                                            keep_noise=keep_noise // divisor, noise_std=noise_std,
                                            layer_name=layer_name, base_name=base_name, 
                                            transfer_name=transfer_name)
+
             inter_out = tf.add(inter_out, out)
             random_idx += r_idx
             full_dims += f_dim
 
+        # i cannot believe that i did this mistake
+        # those were all linear maps without any activation
+        inter_out = activation(inter_out)
+        
         outs.append(inter_out)
         print(outs)
 
