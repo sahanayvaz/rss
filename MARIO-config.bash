@@ -34,7 +34,7 @@ do
                                         --exp_name=$exp_name --evaluation=0
 
                exp_path="$HOME/rss/model_specs/$exp_name.json"
-               bsub -n 16 -R "rusage[mem=512]" "python3 run.py --server_type LEONHARD --visualize 0 --model_spec $exp_path"
+               bsub -n 16 "python3 run.py --server_type LEONHARD --visualize 0 --model_spec $exp_path"
           done
      done
 done
@@ -69,6 +69,6 @@ do
                                    --exp_name=$exp_name --evaluation=0
 
           exp_path="$HOME/rss/model_specs/$exp_name.json"
-          bsub -n 16 -R "rusage[mem=512]" "python3 run.py --server_type LEONHARD --visualize 0 --model_spec $exp_path"
+          bsub -n 16 "python3 run.py --server_type LEONHARD --visualize 0 --model_spec $exp_path"
      done
 done
