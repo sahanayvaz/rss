@@ -35,11 +35,11 @@ do
                                         --exp_name=$exp_name --evaluation=0
 
                exp_path="$HOME/rss/model_specs/$exp_name.json"
-               if [ $seed -e 17 && $server_type -e "LEONHARD" ]; then
+               if [ $seed -eq 17 ] && [ $server_type == "LEONHARD" ]; then
                     bsub -n 16 "python3 run.py --server_type $server_type --visualize 0 --model_spec $exp_path"
-               elif [ $seed -e 41 && $server_type -e "EULER" ]; then
+               elif [ $seed -eq 41 ] && [ $server_type == "EULER" ]; then
                     bsub -n 16 "python3 run.py --server_type $server_type --visualize 0 --model_spec $exp_path"
-               elif [ $server_type -e 'local']; then
+               elif [ $seed -eq 0 ] && [ $server_type == 'local' ]; then
                     echo "local experimentation..."
                fi
           done
