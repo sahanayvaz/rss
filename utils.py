@@ -103,7 +103,8 @@ def feat_v0(out, feat_dim, activation):
         
 def single_rss(inpt, feat_dim, activation, keep_dim, add_noise=False, keep_noise=0, 
                num_layers=2, noise_std=1.0, layer_name='', base_name='', transfer_name=''):
-    in_feat_dim = inpt.shape[-1]
+    in_feat_dim = inpt.get_shape().as_list()[-1]
+
     # print('in_feat_dim: {}'.format(in_feat_dim))
 
     # really unoptimized, will work on it LATER
@@ -118,6 +119,8 @@ def single_rss(inpt, feat_dim, activation, keep_dim, add_noise=False, keep_noise
     weight_init = tf.reshape(weight_initializer, [(keep_dim) * feat_dim])
     # sparse_weights = tf.Variable(initial_value=weight_initializer, trainable=True, dtype=tf.float32, name='sparse_weights')
     # print('building sparse_tensor...')
+
+    # when we define sparse_weights, this is how we do it
     sparse_weights = tf.SparseTensor(indices=random_idx, values=weight_init, dense_shape=(in_feat_dim, feat_dim))
     # print('success...')
 
@@ -151,6 +154,7 @@ def single_rss(inpt, feat_dim, activation, keep_dim, add_noise=False, keep_noise
 
     out = tf.add(tf.matmul(inpt, weights), biases)
 
+    # random_idx is list (feat_dim-1) is int
     random_idx = [random_idx, feat_dim-1]
     full_dim = [(in_feat_dim, feat_dim), (feat_dim,)]
 

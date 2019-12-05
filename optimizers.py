@@ -186,7 +186,25 @@ class PPO(object):
                 sparse_idx = self.policy.random_idx[i]
                 full_dim = self.policy.full_dim[i]
                 mult_conts = np.zeros(full_dim, dtype=np.float32)
-                mult_conts[sparse_idx] = 1.0
+
+                # this is the case for weights
+                if isinstance(sparse_idx, list):
+                    # we must separate (row, col) coords
+                    sparse_idx = np.asarray(sparse_idx)
+                    row_idx = sparse_idx[:, 0]
+                    col_idx = sparse_idx[:, 1] 
+                    mult_conts[row_idx, col_idx] = 1.0
+                    if i == 6:
+                        print('MANUAL TEST SAVING...')
+                        np.savetxt('./mult_conts.csv', mult_conts)
+                        np.savetxt('./r_idx.csv', sparse_idx)
+
+                elif isinstance(sparse_idx, int):
+                    mult_conts[:] = 1.0
+
+                else:
+                    raise TypeError('sparse_idx have not specified type')
+
                 g = tf.multiply(g, tf.convert_to_tensor(mult_conts))
             
         if self.max_grad_norm is not None:
