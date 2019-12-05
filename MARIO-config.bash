@@ -2,6 +2,7 @@
 
 save_dir=$1
 save_interval=25
+server_type=$2
 
 for seed in 0 17 41
 do
@@ -34,7 +35,12 @@ do
                                         --exp_name=$exp_name --evaluation=0
 
                exp_path="$HOME/rss/model_specs/$exp_name.json"
-               bsub -n 16 "python3 run.py --server_type LEONHARD --visualize 0 --model_spec $exp_path"
+               if [ $seed -e 17 && $server_type -e "LEONHARD" ]; then
+                    bsub -n 16 "python3 run.py --server_type $server_type --visualize 0 --model_spec $exp_path"
+               elif [ $seed -e 41 && $server_type -e "EULER" ]; then
+                    bsub -n 16 "python3 run.py --server_type $server_type --visualize 0 --model_spec $exp_path"
+               fi
+
           done
      done
 done
