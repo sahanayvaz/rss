@@ -194,10 +194,6 @@ class PPO(object):
                     row_idx = sparse_idx[:, 0]
                     col_idx = sparse_idx[:, 1] 
                     mult_conts[row_idx, col_idx] = 1.0
-                    if i == 6:
-                        print('MANUAL TEST SAVING...')
-                        np.savetxt('./mult_conts.csv', mult_conts)
-                        np.savetxt('./r_idx.csv', sparse_idx)
 
                 elif isinstance(sparse_idx, int):
                     mult_conts[:] = 1.0
