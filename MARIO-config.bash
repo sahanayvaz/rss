@@ -37,6 +37,7 @@ do
                                              --exp_name=$exp_name --evaluation=0
                     bsub -n 16 "python3 run.py --server_type $server_type --visualize 0 --model_spec $exp_path"
 
+               '''
                elif [ $seed -eq 41 ] && [ $server_type == "EULER" ]; then
                     python3 create_config.py --env_kind="mario" --env_id=$env_id \
                                              --NUM_ENVS=8 --NUM_LEVELS=0 \
@@ -59,7 +60,8 @@ do
                                              --specs_dir='./model_specs'\
                                              --exp_name=$exp_name --evaluation=0
                     bsub -n 16 "python3 run.py --server_type $server_type --visualize 0 --model_spec $exp_path"
-
+               '''
+               
                elif [ $seed -eq 0 ] && [ $server_type == "EULER" ] && [ $keep_dim -ne 50 ]; then
                     python3 create_config.py --env_kind="mario" --env_id=$env_id \
                                              --NUM_ENVS=8 --NUM_LEVELS=0 \
