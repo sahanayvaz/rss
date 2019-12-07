@@ -14,7 +14,7 @@ class Policy(object):
                  perception, feat_spec, policy_spec, 
                  activation, layernormalize, batchnormalize, 
                  add_noise, keep_noise, noise_std, transfer_load,
-                 num_layers, keep_dim,
+                 num_layers, keep_dim, transfer_dim,
                  vf_coef, coinrun):
         
         # warnings
@@ -29,6 +29,8 @@ class Policy(object):
             raise NotImplementedError()
 
         self.transfer_load = transfer_load
+        self.transfer_dim = transfer_dim
+
         self.num_layers = num_layers
         self.keep_dim = keep_dim
 
@@ -162,7 +164,7 @@ class Policy(object):
                                                             act_dim=self.ac_space.n,
                                                             keep_noise=self.keep_noise, noise_std=self.noise_std,
                                                             num_layers=self.num_layers,
-                                                            transfer_load=self.transfer_load)
+                                                            transfer_load=self.transfer_load, transfer_dim=self.transfer_dim)
 
                 # we will use those idx to mask the gradients of not-selected indices as well as 
                 # inject some noise

@@ -6,6 +6,7 @@ def transfer(args):
     HOME = args['HOME']
     SCRATCH = args['SCRATCH']
 
+    # change this according to NL
     log_dir = os.path.join(HOME, 'rss', 'TR-log_dir')
     save_dir = os.path.join(SCRATCH, 'F-RSS-TR-save_dir')
     os.makedirs(save_dir, exist_ok=True)
@@ -16,6 +17,8 @@ def transfer(args):
     transfer_dim = [25, 50, 100]
     levels = ['2-1', '3-1']
     base_name = ['MARIO-RSS-seed', 'MARIO-RSS-NOISE-seed']
+
+    # i should also run those experiments with NL = 2
     NL = 3
     KD = 50
 
@@ -52,6 +55,7 @@ def transfer(args):
                         # train_args['load_dir'] = load_dir
                         train_args['transfer_load'] = 1
                         train_args['freeze_weights'] = 1
+                        train_args['transfer_dim'] = t
 
                         if b == 'MARIO-RSS-NOISE-seed':
                             train_args['add_noise'] = 0

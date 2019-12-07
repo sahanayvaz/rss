@@ -139,6 +139,10 @@ class Trainer(object):
 
         coinrun = 1 if self.args['env_kind'] == 'coinrun' else 0
 
+        transfer_dim = None
+        if args['transfer_load']:
+            transfer_dim = args['transfer_dim']
+            
         self.policy = Policy(scope='policy',
                              ob_space=self.ob_space,
                              ac_space=self.ac_space,
@@ -156,6 +160,7 @@ class Trainer(object):
                              keep_noise=args['keep_noise'],
                              noise_std=args['noise_std'],
                              transfer_load=args['transfer_load'],
+                             transfer_dim=transfer_dim,
                              num_layers=args['num_layers'],
                              keep_dim=args['keep_dim'])
 

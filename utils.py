@@ -239,7 +239,7 @@ def rss(inpt, feat_dim, activation, keep_dim, num_layers, act_dim,
 # we will train this without adding any noise
 def feat_rss_v0(out, feat_dim, activation, keep_dim, act_dim, 
                 add_noise=False, keep_noise=0, num_layers=2, noise_std=1.0,
-                transfer_load=False, base_name='feat_v1'):
+                transfer_load=False, tranfer_dim=None, base_name='feat_v1'):
     outs, train_random_idx, train_full_dim = rss(inpt=out, feat_dim=feat_dim, activation=activation, keep_dim=keep_dim, act_dim=act_dim,
                                                  add_noise=add_noise, keep_noise=keep_noise, num_layers=num_layers, noise_std=noise_std, 
                                                  base_name=base_name, transfer_name='')
@@ -248,7 +248,7 @@ def feat_rss_v0(out, feat_dim, activation, keep_dim, act_dim,
     full_dim = {'train_full_dim': train_full_dim}
 
     if transfer_load:
-        outs, trans_random_idx, trans_full_dim = rss(inpt=out, feat_dim=feat_dim, activation=activation, keep_dim=keep_dim, act_dim=act_dim,
+        outs, trans_random_idx, trans_full_dim = rss(inpt=out, feat_dim=feat_dim, activation=activation, keep_dim=tranfer_dim, act_dim=act_dim,
                                                      add_noise=add_noise, keep_noise=keep_noise, num_layers=num_layers, noise_std=noise_std, 
                                                      base_name=base_name, transfer_name='_transfer')
         random_idx['trans_random_idx'] = trans_random_idx
