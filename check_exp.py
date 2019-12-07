@@ -13,6 +13,7 @@ for d in dirs:
         data = pd.read_csv(csv)
         iters = data['iter'].tolist()
         if 'TRD' in d:
+            dir_path = os.path.join(HOME, 'log_dir', d)
             shutil.rmtree(d)
 
         if iters[-1] != 1464 and not('NSTD-1.0' in d or 'NSTD-0.5' in d):
