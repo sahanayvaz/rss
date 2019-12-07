@@ -4,6 +4,9 @@ save_dir=$1
 save_interval=25
 server_type=$2
 
+num_timesteps=256000000
+early_final=20000000
+
 for seed in 0 17 41
 do
      exp_name='COINRUN-baseline-seed-$seed-100'
@@ -33,8 +36,6 @@ done
 
 for seed in 0 17 41
 do
-     num_timesteps=256000000
-     early_final=20000000
      for num_layers in 1 2
      do
           keep_dim=100
