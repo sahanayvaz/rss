@@ -9,9 +9,9 @@ dirs = os.listdir(dir_path)
 
 for d in dirs:
     if 'TRD' in d:
-        dir_path = os.path.join(HOME, 'log_dir', d)
-        print(dir_path)
-        shutil.rmtree(dir_path)
+        remove_path = os.path.join(HOME, 'log_dir', d)
+        print(remove_path)
+        shutil.rmtree(remove_path)
         print('removed')
 
 dirs = os.listdir(dir_path)
