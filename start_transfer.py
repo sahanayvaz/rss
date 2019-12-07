@@ -74,7 +74,7 @@ def transfer(args):
                             os.system(command)
                             total += 1
 
-                        elif s == 41:
+                        elif s == 41 or N == 2:
                             server_type = 'EULER'
                             print('running exp: {}'.format(transfer_model_spec))
                             subcommand = "python3 run.py --server_type {} --model_spec {} --restore_iter {}".format(server_type, transfer_model_spec, load_iter)
