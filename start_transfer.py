@@ -62,7 +62,7 @@ def transfer(args):
                         with open(transfer_model_spec, 'w') as file:
                             json.dump(train_args, file)
 
-                        if s == 0 or s == 17:
+                        if s == 0 or s == 17 or b == 'MARIO-RSS-NOISE-seed':
                             server_type = 'LEONHARD'
                             print('running exp: {}'.format(transfer_model_spec))
                             subcommand = "python3 run.py --server_type {} --model_spec {} --restore_iter {}".format(server_type, transfer_model_spec, load_iter)
