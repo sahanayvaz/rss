@@ -68,6 +68,7 @@ def transfer(args):
                             subcommand = "python3 run.py --server_type {} --model_spec {} --restore_iter {}".format(server_type, transfer_model_spec, load_iter)
                             command = "bsub -n 8 '{}'".format(subcommand)
                             os.system(command)
+                            total += 1
 
                         elif s == 41:
                             server_type = 'EULER'
@@ -75,10 +76,12 @@ def transfer(args):
                             subcommand = "python3 run.py --server_type {} --model_spec {} --restore_iter {}".format(server_type, transfer_model_spec, load_iter)
                             command = "bsub -n 8 '{}'".format(subcommand)
                             os.system(command)
-                    
+                            total += 1
                     except:
                         pass
 
+    print('total number of experiments: {}'.format(total))
+    
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--HOME', default='./')
