@@ -17,8 +17,8 @@ for d in dirs:
             print(dir_path)
             shutil.rmtree(dir_path)
             print('removed')
-            
-        if iters[-1] != 1464 and not('NSTD-1.0' in d or 'NSTD-0.5' in d):
+
+        if iters[-1] != 1464 and not('NSTD-1.0' in d or 'NSTD-0.5' in d) and not('TRD' in d):
             print('restarting experiments:', d, iters[-1])
             model_spec = os.path.join(HOME, 'model_specs', '{}.json'.format(d))
             subcommand = "python3 run.py --server_type LEONHARD --model_spec {} --restore_iter {}".format(model_spec, iters[-1])
