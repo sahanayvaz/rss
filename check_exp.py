@@ -9,6 +9,7 @@ dirs = os.listdir(dir_path)
 
 for d in dirs:
     if not('COINRUN' in d):
+        print(d)
         csv = os.path.join(dir_path, d, 'inter', 'progress.csv')
         data = pd.read_csv(csv)
         iters = data['iter'].tolist()
