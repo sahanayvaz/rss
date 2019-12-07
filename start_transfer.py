@@ -19,7 +19,7 @@ def transfer(args):
     base_name = ['MARIO-RSS-seed', 'MARIO-RSS-NOISE-seed']
 
     # i should also run those experiments with NL = 2
-    NL = 3
+    NL = args['NL']
     KD = 50
 
     # we chose KN, because of the training performance
@@ -88,7 +88,8 @@ def transfer(args):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
-    parser.add_argument('--HOME', default='./')
-    parser.add_argument('--SCRATCH', default='./')
+    parser.add_argument('--HOME', type=str, default='./')
+    parser.add_argument('--SCRATCH', type=str, default='./')
+    parser.add_argument('--NL', type=int, default=3)
     args = parser.parse_args()
     transfer(vars(args))
