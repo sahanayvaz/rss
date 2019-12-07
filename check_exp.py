@@ -8,8 +8,7 @@ dir_path = os.path.join(HOME, 'log_dir')
 dirs = os.listdir(dir_path)
 
 for d in dirs:
-    if not('COINRUN' in d):
-        print(d)
+    try:
         csv = os.path.join(dir_path, d, 'inter', 'progress.csv')
         data = pd.read_csv(csv)
         iters = data['iter'].tolist()
@@ -25,3 +24,7 @@ for d in dirs:
             subcommand = "python3 run.py --server_type LEONHARD --model_spec {} --restore_iter {}".format(model_spec, iters[-1])
             command = "bsub -n 8 '{}'".format(subcommand)
             os.system(command)
+        print(d)
+        
+    except:
+        pass
