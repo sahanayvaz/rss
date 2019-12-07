@@ -9,7 +9,7 @@ early_final=20000000
 
 for seed in 0 17 41
 do
-     exp_name='COINRUN-baseline-seed-$seed-100'
+     exp_name="COINRUN-baseline-seed-$seed-100"
      exp_path="$HOME/rss/model_specs/$exp_name.json"
      python3 create_config.py --env_kind="coinrun" --env_id="coinrun" --NUM_ENVS=32 --NUM_LEVELS=100 \
                               --SET_SEED=13 --PAINT_VEL_INFO=1 --USE_DATA_AUGMENTATION=0 --GAME_TYPE="standard" \
