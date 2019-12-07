@@ -15,8 +15,9 @@ for d in dirs:
         if 'TRD' in d:
             dir_path = os.path.join(HOME, 'log_dir', d)
             print(dir_path)
-            shutil.rmtree(d)
-
+            shutil.rmtree(dir_path)
+            print('removed')
+            
         if iters[-1] != 1464 and not('NSTD-1.0' in d or 'NSTD-0.5' in d):
             print('restarting experiments:', d, iters[-1])
             model_spec = os.path.join(HOME, 'model_specs', '{}.json'.format(d))
