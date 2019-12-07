@@ -328,15 +328,14 @@ class Trainer(object):
             ## evaluate each 100 run for 20 training levels
             # only for mario (first evaluate, then update)
             # i am doing change to get zero-shot generalization without any effort
-            if self.args['env_kind'] == 'mario':
-                if curr_iter % (self.args['save_interval']) == 0:
-                    save_video = False
-                    nlevels = 20
-                    results, _ = self.agent.evaluate(nlevels, save_video)
-                    results['iter'] = curr_iter
-                    for (k, v) in results.items():
-                        self.result_logger.logkv(k, v)
-                    self.result_logger.dumpkvs()
+            if curr_iter % (self.args['save_interval']) == 0:
+                save_video = False
+                nlevels = 20 if self.args['env_kind'] == 'mario' else self.args['NUM_LEVELS']
+                results, _ = self.agent.evaluate(nlevels, save_video)
+                results['iter'] = curr_iter
+                for (k, v) in results.items():
+                    self.result_logger.logkv(k, v)
+                self.result_logger.dumpkvs()
 
             # representation learning in each 25 steps
             info = self.agent.update(lr=curr_lr, cliprange=curr_cr)
@@ -367,14 +366,13 @@ class Trainer(object):
         self.agent.save(curr_iter, cliprange=curr_cr)
 
         # final evaluation for mario
-        if self.args['env_kind'] == 'mario':
-            save_video = False
-            nlevels = 20
-            results, _ = self.agent.evaluate(nlevels, save_video)
-            results['iter'] = curr_iter
-            for (k, v) in results.items():
-                self.result_logger.logkv(k, v)
-            self.result_logger.dumpkvs()
+        save_video = False
+        nlevels = 20 if self.args['env_kind'] == 'mario' else self.args['NUM_LEVELS']
+        results, _ = self.agent.evaluate(nlevels, save_video)
+        results['iter'] = curr_iter
+        for (k, v) in results.items():
+            self.result_logger.logkv(k, v)
+        self.result_logger.dumpkvs()
 
     def eval(self):
         # create base_dir to save results
