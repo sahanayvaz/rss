@@ -20,7 +20,7 @@ def transfer(args):
     KD = 50
 
     # we chose KN, because of the training performance
-    KN = 25
+    KN = 50
 
     NSTD = 0.1
     load_iter = 1464
