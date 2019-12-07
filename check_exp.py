@@ -27,7 +27,10 @@ for d in dirs:
             subcommand = "python3 run.py --server_type LEONHARD --model_spec {} --restore_iter {}".format(model_spec, iters[-1])
             command = "bsub -n 8 '{}'".format(subcommand)
             os.system(command)
-        print(d)
 
     except:
-        pass
+        if 'MARIO' in d:
+            model_spec = os.path.join(HOME, 'model_specs', '{}.json'.format(d))
+            subcommand = "python3 run.py --server_type LEONHARD --model_spec {}".format(model_spec)
+            command = "bsub -n 8 '{}'".format(subcommand)
+            os.system(command)
