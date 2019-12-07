@@ -1,6 +1,7 @@
 import os
 import pandas as pd
 from subprocess import call
+import shutil
 
 HOME = '/cluster/home/sayvaz/rss'
 dir_path = os.path.join(HOME, 'log_dir')
@@ -12,8 +13,7 @@ for d in dirs:
         data = pd.read_csv(csv)
         iters = data['iter'].tolist()
         if 'TRD' in d:
-            model_spec = os.path.join(HOME, 'model_specs', '{}.json'.format(d))
-            os.remove(model_spec)
+            shutil.rmtree(d)
 
         if iters[-1] != 1464 and not('NSTD-1.0' in d or 'NSTD-0.5' in d):
             print('restarting experiments:', d, iters[-1])
