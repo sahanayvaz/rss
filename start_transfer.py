@@ -6,7 +6,7 @@ def transfer(args):
     HOME = args['HOME']
     SCRATCH = args['SCRATCH']
 
-    log_dir = os.path.join(HOME, 'rss', 'log_dir')
+    log_dir = os.path.join(HOME, 'rss', 'TR-log_dir')
     save_dir = os.path.join(SCRATCH, 'F-RSS-TR-save_dir')
     os.makedirs(save_dir, exist_ok=True)
 
@@ -81,7 +81,7 @@ def transfer(args):
                         pass
 
     print('total number of experiments: {}'.format(total))
-    
+
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--HOME', default='./')

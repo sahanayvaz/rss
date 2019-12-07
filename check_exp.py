@@ -11,6 +11,10 @@ for d in dirs:
         csv = os.path.join(dir_path, d, 'inter', 'progress.csv')
         data = pd.read_csv(csv)
         iters = data['iter'].tolist()
+        if 'TRD' in d:
+            model_spec = os.path.join(HOME, 'model_specs', '{}.json'.format(d))
+            os.remove(model_spec)
+
         if iters[-1] != 1464 and not('NSTD-1.0' in d or 'NSTD-0.5' in d):
             print('restarting experiments:', d, iters[-1])
             model_spec = os.path.join(HOME, 'model_specs', '{}.json'.format(d))
