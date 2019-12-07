@@ -63,13 +63,13 @@ def transfer(args):
 
                     if s == 0 or s == 17:
                         server_type = 'LEONHARD'
-                        subcommand = "python3 run.py --server_type {} --model_spec {} --restore_iter {}".format(server_type, model_spec, load_iter)
+                        subcommand = "python3 run.py --server_type {} --model_spec {} --restore_iter {}".format(server_type, transfer_model_spec, load_iter)
                         command = "bsub -n 8 '{}'".format(subcommand)
                         os.system(command)
 
                     elif s == 41:
                         server_type = 'EULER'
-                        subcommand = "python3 run.py --server_type {} --model_spec {} --restore_iter {}".format(server_type, model_spec, load_iter)
+                        subcommand = "python3 run.py --server_type {} --model_spec {} --restore_iter {}".format(server_type, transfer_model_spec, load_iter)
                         command = "bsub -n 8 '{}'".format(subcommand)
                         os.system(command)
 
