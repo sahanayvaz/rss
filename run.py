@@ -412,7 +412,8 @@ class Trainer(object):
 
         for r in restore_iter:
             load_path = os.path.join(self.args['load_dir'], 'model-{}'.format(r))
-            self.agent.load(l)
+            print(load_path)
+            self.agent.load(load_path)
             
             save_video = False
             nlevels = 20 if self.args['env_kind'] == 'mario' else self.args['NUM_LEVELS']
