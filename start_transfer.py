@@ -16,7 +16,7 @@ def transfer(args):
     seeds = [0, 17, 41]
     transfer_dim = [25, 50, 100]
     levels = ['2-1', '3-1']
-    base_name = ['MARIO-RSS-seed', 'MARIO-RSS-NOISE-seed']
+    base_name = ['MARIO-baseline-seed']
 
     # i should also run those experiments with NL = 2
     NL = args['NL']
@@ -29,6 +29,8 @@ def transfer(args):
     load_iter = 1464
 
     total = 0
+
+    '''
     for l in levels:
         level_name = 'SuperMarioBros-{}-v0'.format(l)
         for s in seeds:
@@ -83,6 +85,40 @@ def transfer(args):
                             total += 1
                     except:
                         pass
+    '''
+
+    for l in levels:
+        level_name = 'SuperMarioBros-{}-v0'.format(l)
+        for s in seeds:
+            for b in base_name:
+                exp_name = '{}-{}-TR-{}-v0'.format(b, s, l)
+                load_exp = '{}-{}-1-1-v0'.format(b, s)                
+                load_exp_json = os.path.join(model_specs, '{}.json'.format(load_exp))
+                with open(load_exp_json, 'r') as file:
+                    train_args = json.load(file)
+                train_args['env_id'] = level_name
+                train_args['exp_name'] = exp_name
+                exp_save_dir = os.path.join(save_dir, exp_name)
+                exp_log_dir = os.path.join(log_dir, exp_name)
+                os.makedirs(exp_save_dir, exist_ok=True)
+                os.makedirs(exp_log_dir, exist_ok=True)
+                train_args['save_dir'] = exp_save_dir
+                train_args['log_dir'] = exp_log_dir
+                # train_args['load_dir'] = load_dir
+                # train_args['transfer_load'] = 1
+                # train_args['freeze_weights'] = 1
+                # train_args['transfer_dim'] = t
+
+                transfer_model_spec = os.path.join(model_specs, '{}.json'.format(exp_name))
+                with open(transfer_model_spec, 'w') as file:
+                    json.dump(train_args, file)
+
+                server_type = 'LEONHARD'
+                print('running exp: {}'.format(transfer_model_spec))
+                subcommand = "python3 run.py --server_type {} --model_spec {} --restore_iter {}".format(server_type, transfer_model_spec, load_iter)
+                command = "bsub -n 8 '{}'".format(subcommand)
+                os.system(command)
+                total += 1
 
     print('total number of experiments: {}'.format(total))
 
