@@ -406,7 +406,7 @@ class Trainer(object):
 
         # curr_iter = 0
         # results_list = []
-        restore_iter = [25 * i for in range(60)] + 1464
+        restore_iter = [25 * i for i in range(59)] + 1464
 
         for r in restore_iter:
             load_path = os.path.join(self.load_dir, 'model-{}'.format(r))
