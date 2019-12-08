@@ -54,9 +54,4 @@ for d in dirs:
 
 
         elif 'COINRUN' in d:
-            check_iter = 2441
-            csv = os.path.join(dir_path, d, 'inter', 'progress.csv')
-            data = pd.read_csv(csv)
-            iters = data['iter'].tolist()
-            if iters[-1] != check_iter:
-                print('undone experiments: {}, iter: {}'.format(d, iters[-1]))
+            print('undone experiments: {}, iter: {}'.format(d, iters[-1]))
