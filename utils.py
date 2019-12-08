@@ -257,7 +257,7 @@ def feat_rss_v0(out, feat_dim, activation, keep_dim, act_dim,
     return outs, random_idx, full_dim
 
 # we are making a lot of changes
-def cr_fc_v0(out, ncat, nentities):
+def cr_fc_v0(out, ncat):
     # might not be necessary
     # be careful about this
     # this does NOT affect anything
@@ -271,7 +271,7 @@ def cr_fc_v0(out, ncat, nentities):
     vpred = fc(out, 1, activation=None, batchnormalize=False, init_scale=1.0)[:, 0]
     return pdparam, vpred
 
-def cr_fc_v1(out, ncat, nentities):
+def cr_fc_v1(out, ncat):
     # might not be necessary
     # be careful about this
     if nentities:
@@ -287,7 +287,7 @@ def cr_fc_v1(out, ncat, nentities):
     return pdparam, vpred
 
 
-def ls_c_v0(out, ncat, activation, nentities):
+def ls_c_v0(out, ncat, activation):
     hidsize = 512
 
     # actual policy
@@ -299,7 +299,7 @@ def ls_c_v0(out, ncat, activation, nentities):
     return pdparam, vpred
 
 
-def ls_c_hh(out, ncat, activation, nentities):
+def ls_c_hh(out, ncat, activation):
     hidsize = 512
 
     # might not be necessary
@@ -316,7 +316,7 @@ def ls_c_hh(out, ncat, activation, nentities):
     return pdparam, vpred
 
 
-def ls_c_v1(out, ncat, activation, nentities=None):
+def ls_c_v1(out, ncat, activation):
     feat_dim = 512
     hidsize = 512
 

@@ -138,17 +138,17 @@ class Policy(object):
             if self.policy_spec == 'cr_fc_v0':
                 # we might need to ignore the extra 512 in the future
                 # for entity-based policy
-                x = utils.cr_fc_v0(x, self.pdparamsize, self.nentities_per_state)
+                x = utils.cr_fc_v0(x, self.pdparamsize)
             elif self.policy_spec == 'cr_fc_v1':
                 # we might need to ignore the extra 512 in the future
                 # for entity-based policy
-                x = utils.cr_fc_v1(x, self.pdparamsize, self.nentities_per_state)
+                x = utils.cr_fc_v1(x, self.pdparamsize)
             elif self.policy_spec == 'ls_c_v0':
-                x = utils.ls_c_v0(x, ncat=self.pdparamsize, activation=self.activation, nentities=self.nentities_per_state)
+                x = utils.ls_c_v0(x, ncat=self.pdparamsize, activation=self.activation)
             elif self.policy_spec == 'ls_c_v1':
-                x = utils.ls_c_v1(x, ncat=self.pdparamsize, activation=self.activation, nentities=self.nentities_per_state)
+                x = utils.ls_c_v1(x, ncat=self.pdparamsize, activation=self.activation)
             elif self.policy_spec == 'ls_c_hh':
-                x = utils.ls_c_hh(x, ncat=self.pdparamsize, activation=self.activation, nentities=self.nentities_per_state)
+                x = utils.ls_c_hh(x, ncat=self.pdparamsize, activation=self.activation)
             elif self.policy_spec == 'full_sparse':
                 print('''
 
