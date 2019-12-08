@@ -22,7 +22,7 @@ def read_save(progress_csv, base_name, dict_):
 LEO_log_dir = './LEO-F-log_dir'
 EULER_log_dir = './EULER-F-log_dir'
 
-base_names = ['MARIO-RSS', 'MARIO-RSS-NOISE']
+base_names = ['MARIO-baseline', 'MARIO-RSS', 'MARIO-RSS-NOISE']
 NL = [2, 3, 5]
 KD = [50, 150, 250]
 
@@ -35,6 +35,16 @@ NSTD = 0.1
 
 for b in base_names:
     for s in seeds:
+        if b == 'MARIO-baseline':
+            base_name = 'MARIO_baseline_1_1'
+            dir_name = '{}-seed-{}-1-1-v0'.format(b, s)
+            try:
+                progress_csv = os.path.join(LEO_log_dir, dir_name, 'inter', 'progress.csv')
+                read_save(progress_csv, base_name, dict_exp)    
+            except:
+                progress_csv = os.path.join(EULER_log_dir, dir_name, 'inter', 'progress.csv')
+                read_save(progress_csv, base_name, dict_exp)
+
         for n in NL:
             if b == 'MARIO-RSS':
                 for k in KD:
@@ -50,7 +60,7 @@ for b in base_names:
             # we did not test NL=5 for NOISE
             elif (b == 'MARIO-RSS-NOISE') and (n != 5):
                 for v in KN:
-                    base_name = 'MARIO_RSS_NOISE_NL_{}_KN_{}_NSTD_{}'.format(n, v, NSTD)
+                    base_name = 'MARIO_RSS_NOISE_NL_{}_KN_{}_NSTD_01'.format(n, v)
                     dir_name = '{}-seed-{}-NL-{}-KN-{}-NSTD-{}-1-1-v0'.format(b, s, n, v, NSTD)
                     try:
                         progress_csv = os.path.join(LEO_log_dir, dir_name, 'inter', 'progress.csv')
