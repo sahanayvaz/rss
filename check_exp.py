@@ -40,8 +40,8 @@ for d in dirs:
             csv = os.path.join(dir_path, d, 'inter', 'progress.csv')
             data = pd.read_csv(csv)
             iters = data['iter'].tolist()
-            if iters[-1] != check_iter
-            print('undone experiments: {}, iter: {}'.format(d, iters[-1]))
+            if iters[-1] != check_iter:
+                print('undone experiments: {}, iter: {}'.format(d, iters[-1]))
 
     except:
         if 'MARIO' in d:
@@ -52,11 +52,11 @@ for d in dirs:
             command = "bsub -n 8 '{}'".format(subcommand)
             os.system(command)
 
-        
+
         elif 'COINRUN' in d:
             check_iter = 2441
             csv = os.path.join(dir_path, d, 'inter', 'progress.csv')
             data = pd.read_csv(csv)
             iters = data['iter'].tolist()
-            if iters[-1] != check_iter
-            print('undone experiments: {}, iter: {}'.format(d, iters[-1]))
+            if iters[-1] != check_iter:
+                print('undone experiments: {}, iter: {}'.format(d, iters[-1]))
