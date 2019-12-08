@@ -105,7 +105,7 @@ def transfer(args):
                 train_args['save_dir'] = exp_save_dir
                 train_args['log_dir'] = exp_log_dir
                 # train_args['load_dir'] = load_dir
-                # train_args['transfer_load'] = 1
+                train_args['transfer_load'] = 1
                 # train_args['freeze_weights'] = 1
                 # train_args['transfer_dim'] = t
 
