@@ -21,15 +21,11 @@ for d in dirs:
     try:
         if 'MARIO' in d:
             check_iter = 1464
-            if '2-1' in d:
-                check_iter = 2929
-            elif '3-1' in d:
-                check_iter = 4392
             csv = os.path.join(dir_path, d, 'inter', 'progress.csv')
             data = pd.read_csv(csv)
             iters = data['iter'].tolist()
 
-            if iters[-1] != check_iter and not('NSTD-1.0' in d or 'NSTD-0.5' in d):
+            if iters[-1] < check_iter and not('NSTD-1.0' in d or 'NSTD-0.5' in d):
                 print('restarting experiments:', d, iters[-1])
                 model_spec = os.path.join(HOME, 'model_specs', '{}.json'.format(d))
                 subcommand = "python3 run.py --server_type LEONHARD --model_spec {} --restore_iter {}".format(model_spec, iters[-1])
