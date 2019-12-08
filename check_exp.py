@@ -34,6 +34,6 @@ for d in dirs:
         if 'MARIO' in d:
             print(d)
             model_spec = os.path.join(HOME, 'model_specs', '{}.json'.format(d))
-            subcommand = "python3 run.py --server_type LEONHARD --model_spec {}".format(model_spec)
+            subcommand = "python3 run.py --server_type LEONHARD --model_spec {} --restore_iter {}".format(model_spec, 1464)
             command = "bsub -n 8 '{}'".format(subcommand)
             os.system(command)
