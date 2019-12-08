@@ -4,7 +4,7 @@ from subprocess import call
 import shutil
 
 HOME = '/cluster/home/sayvaz/rss'
-dir_path = os.path.join(HOME, 'TR-log_dir')
+dir_path = os.path.join(HOME, 'log_dir')
 dirs = os.listdir(dir_path)
 
 '''
@@ -34,6 +34,7 @@ for d in dirs:
         if 'MARIO' in d:
             print(d)
             model_spec = os.path.join(HOME, 'model_specs', '{}.json'.format(d))
-            subcommand = "python3 run.py --server_type LEONHARD --model_spec {} --restore_iter {}".format(model_spec, 1464)
+            # subcommand = "python3 run.py --server_type LEONHARD --model_spec {} --restore_iter {}".format(model_spec, 1464)
+            subcommand = "python3 run.py --server_type LEONHARD --model_spec {}".format(model_spec)
             command = "bsub -n 8 '{}'".format(subcommand)
             os.system(command)
