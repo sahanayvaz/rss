@@ -571,6 +571,7 @@ if __name__ == '__main__':
     parser.add_argument('--restore_iter', type=int, default=-1)
     parser.add_argument('--server_type', type=str, default='local')
     parser.add_argument('--visualize', type=int, default=0)
+    parser.add_argument('--evaluate', type=int, default=0)
     args = parser.parse_args()
 
     with open(args.model_spec, 'r') as file:
@@ -585,5 +586,5 @@ if __name__ == '__main__':
     train_args['restore_iter'] = args.restore_iter
     train_args['server_type'] = args.server_type
     train_args['visualize'] = args.visualize
-
+    train_args['evaluation'] = args.evaluate
     start_experiment(**train_args)
