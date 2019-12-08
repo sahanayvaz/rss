@@ -116,7 +116,7 @@ def transfer(args):
                 server_type = 'LEONHARD'
                 print('running exp: {}'.format(transfer_model_spec))
                 subcommand = "python3 run.py --server_type {} --model_spec {} --restore_iter {}".format(server_type, transfer_model_spec, load_iter)
-                command = "bsub -n 8 '{}'".format(subcommand)
+                command = "bsub -n 8 -W 8:00 '{}'".format(subcommand)
                 os.system(command)
                 total += 1
 
