@@ -50,4 +50,4 @@ for d in dirs:
 
 
         elif 'COINRUN' in d:
-            print('undone experiments: {}, iter: {}'.format(d, iters[-1]))
+            print('undone experiments: {}, iter: None'.format(d)
