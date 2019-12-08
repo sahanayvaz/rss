@@ -411,13 +411,13 @@ class Trainer(object):
         restore_iter = [25 * i for i in range(59)] + [1464]
 
         for r in restore_iter:
-            load_path = os.path.join(self.load_dir, 'model-{}'.format(r))
+            load_path = os.path.join(self.args['load_dir'], 'model-{}'.format(r))
             self.agent.load(l)
             
             save_video = False
             nlevels = 20 if self.args['env_kind'] == 'mario' else self.args['NUM_LEVELS']
             results, _ = self.agent.evaluate(nlevels, save_video)
-            results['iter'] = curr_iter
+            results['iter'] = r
             for (k, v) in results.items():
                 self.result_logger.logkv(k, v)
             self.result_logger.dumpkvs()
