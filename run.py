@@ -262,7 +262,7 @@ class Trainer(object):
                 # load_path = '/'.join(load_path)
                 # load_path_pkl = os.path.join(load_path, 'mean_std.pkl')
                 
-                load_path = os.path.join(self.args['load_dir'], 'mean_std.pkl') 
+                load_path_pkl = os.path.join(self.args['load_dir'], 'mean_std.pkl') 
                 self._load_mean_std(load_path_pkl)
             else:
                 save_path_pkl = os.path.join(self.args['load_dir'], 'mean_std.pkl')
