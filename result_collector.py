@@ -62,12 +62,7 @@ for b in base_names:
 save_dict = {}
 for k in dict_exp.keys():
     rew_mean_list = dict_exp[k]
-    
-    for r in rew_mean_list:
-        print(np.asarray(r).shape)
     rew_mean_arr = np.asarray(rew_mean_list)
-
-
     rew_mean = np.mean(rew_mean_arr, axis=0)
     rew_std = np.std(rew_mean_arr, axis=0)
     save_dict[k] = {'rew_mean_arr': rew_mean_arr,
