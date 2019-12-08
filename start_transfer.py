@@ -107,7 +107,7 @@ def transfer(args):
                 # train_args['load_dir'] = load_dir
                 train_args['transfer_load'] = 1
                 # train_args['freeze_weights'] = 1
-                # train_args['transfer_dim'] = t
+                train_args['transfer_dim'] = 0
 
                 transfer_model_spec = os.path.join(model_specs, '{}.json'.format(exp_name))
                 with open(transfer_model_spec, 'w') as file:
