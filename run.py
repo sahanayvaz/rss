@@ -382,35 +382,48 @@ class Trainer(object):
     def eval(self):
         # create base_dir to save results
         env_id = self.args['env_id'] if self.args['env_kind'] == 'mario' else self.args['eval_type']
-        base_dir =  os.path.join(self.args['log_dir'], self.args['exp_name'], env_id)
-
-        os.makedirs(base_dir, exist_ok=True)
+        # base_dir =  os.path.join(self.args['log_dir'], self.args['exp_name'], env_id)
+        # os.makedirs(base_dir, exist_ok=True)
 
         # i forget to restore, i cannot believe myself
-        load_path = self.args['load_path']
+        # load_path = self.args['load_path']
 
         # args['IS_HIGH_RES'] is used to signal whether save videos
         nlevels =  self.args['NUM_LEVELS']
 
         save_video = False
         
+        # train progress results logger
+        format_strs = ['csv']
+        format_strs = filter(None, format_strs)
+        dirc = os.path.join(self.args['log_dir'], 'inter')
+        output_formats = [logger.make_output_format(f, dirc) for f in format_strs]
+        self.result_logger = logger.Logger(dir=dirc, output_formats=output_formats)
+
         if self.args['env_kind'] == 'mario':
             # do NOT FORGET to change this
             nlevels = 20
 
-        curr_iter = 0
-        results_list = []
-        for l in load_path:
+        # curr_iter = 0
+        # results_list = []
+        restore_iter = [25 * i for in range(60)] + 1464
+
+        for r in restore_iter:
+            load_path = os.path.join(self.load_dir, 'model-{}'.format(r))
             self.agent.load(l)
             
-            if l == load_path[-1]:
-                # print('saving video for the final run')
-                save_video = False
-
-            results, eval_imgs = self.agent.evaluate(nlevels, save_video)
-            results['iter'] = curr_iter = int(l.split('/')[-1].split('-')[-1])
-            print(results)
-            results_list.append(results)
+            save_video = False
+            nlevels = 20 if self.args['env_kind'] == 'mario' else self.args['NUM_LEVELS']
+            results, _ = self.agent.evaluate(nlevels, save_video)
+            results['iter'] = curr_iter
+            for (k, v) in results.items():
+                self.result_logger.logkv(k, v)
+            self.result_logger.dumpkvs()
+        
+        '''    
+        results['iter'] = curr_iter = int(l.split('/')[-1].split('-')[-1])
+        print(results)
+        results_list.append(results)
 
         csv_columns = results_list[0].keys()
         print(csv_columns)
@@ -425,6 +438,7 @@ class Trainer(object):
             for data in results_list:
                 writer.writerow(data)
         print('results are dumped to {}'.format(csv_save_path))
+        '''
 
         '''
         # saving video

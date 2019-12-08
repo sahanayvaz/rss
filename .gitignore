@@ -12,3 +12,6 @@ EULER-F*/
 LEO-F*/
 LEO-TR-*/
 EULER-TR-*/
+
+*.h5
+result_collector*
