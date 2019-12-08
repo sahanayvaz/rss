@@ -296,6 +296,8 @@ class Trainer(object):
         format_strs = ['csv']
         format_strs = filter(None, format_strs)
         dirc = os.path.join(self.args['log_dir'], 'inter')
+        if self.restore_iter > -1:
+            dirc = os.path.join(self.args['log_dir'], 'inter-{}'.format(self.restore_iter))
         output_formats = [logger.make_output_format(f, dirc) for f in format_strs]
         self.result_logger = logger.Logger(dir=dirc, output_formats=output_formats)
 
