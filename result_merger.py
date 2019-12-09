@@ -1,7 +1,7 @@
 import os
 import pandas as pd
 
-log_dir = './LEO-F-log_dir'
+log_dir = './log_dir'
 
 folders = os.listdir(log_dir)
 for f in folders:
