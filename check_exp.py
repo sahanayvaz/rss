@@ -36,7 +36,7 @@ for d in dirs:
             csv = os.path.join(dir_path, d, 'inter', 'progress.csv')
             data = pd.read_csv(csv)
             iters = data['iter'].tolist()
-            if iters[-1] != check_iter:
+            if check_iter not in iters:
                 print('undone experiments: {}, iter: {}'.format(d, iters[-1]))
                 '''
                 model_spec = os.path.join(HOME, 'model_specs', '{}.json'.format(d))
