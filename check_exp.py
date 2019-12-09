@@ -38,11 +38,12 @@ for d in dirs:
             iters = data['iter'].tolist()
             if iters[-1] != check_iter:
                 print('undone experiments: {}, iter: {}'.format(d, iters[-1]))
+                '''
                 model_spec = os.path.join(HOME, 'model_specs', '{}.json'.format(d))
                 subcommand = "python3 run.py --server_type LEONHARD --model_spec {} --restore_iter {}".format(model_spec, iters[-1])
                 command = "bsub -n 16 '{}'".format(subcommand)
                 os.system(command)
-
+                '''
     except:
         if 'MARIO' in d:
             print(d)
