@@ -1,4 +1,5 @@
 import os
+import pandas as pd
 
 log_dir = './log_dir'
 
@@ -7,4 +8,16 @@ for f in folders:
     if 'COINRUN' in f:
         path = os.path.join(log_dir, f)
         inters = os.listdir(path)
-        print(inters)
+        if len(inters) > 2:
+            df = [None, None]
+            for i in inters:
+                if 'inter-' in i:
+                    i_path = os.path.join(path, i, 'progress.csv')
+                    df2 = pd.read_csv(i_path)
+                    df[1] = df2
+                elif 'inter' in i:
+                    i_path = os.path.join(path, i, 'progress.csv')
+                    df1 = pd.read_csv(i_path)
+                    df[0] = df1
+            df = pd.concat(df)
+            df.to_csv(ps.path.join(path, 'inter', 'test.csv'))
