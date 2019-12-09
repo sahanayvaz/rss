@@ -12,9 +12,13 @@ for f in folders:
             df = [None, None]
             for i in inters:
                 if 'inter-' in i:
-                    i_path = os.path.join(path, i, 'progress.csv')
-                    df2 = pd.read_csv(i_path)
-                    df[1] = df2
+                    try:
+                        i_path = os.path.join(path, i, 'progress.csv')
+                        df2 = pd.read_csv(i_path)
+                        df[1] = df2
+                    except:
+                        print(i_path)
+                        sys.exit()
                 elif 'inter' in i:
                     i_path = os.path.join(path, i, 'progress.csv')
                     df1 = pd.read_csv(i_path)
