@@ -52,7 +52,6 @@ for d in dirs:
             command = "bsub -n 8 '{}'".format(subcommand)
             os.system(command)
 
-
         elif 'COINRUN' in d:
             print('undone experiments: {}, iter: {}'.format(d, iters[-1]))
             model_spec = os.path.join(HOME, 'model_specs', '{}.json'.format(d))
