@@ -259,7 +259,7 @@ def feat_rss_v0(out, feat_dim, activation, keep_dim, act_dim,
 # we are making a lot of changes
 def cr_fc_v0(out, ncat):
     # might not be necessary
-    
+
     # out = fc(out, 512, activation='relu', batchnormalize=False, init_scale=np.sqrt(2))
     # out = fc(out, 512, activation='relu', batchnormalize=False, init_scale=np.sqrt(2))
 
@@ -270,8 +270,6 @@ def cr_fc_v0(out, ncat):
 def cr_fc_v1(out, ncat):
     # might not be necessary
     # be careful about this
-    if nentities:
-        hidsize = nentities
     
     # to must also get results for this one for the future when we decide to use
     # jacobian penalty
