@@ -20,4 +20,4 @@ for f in folders:
                     df1 = pd.read_csv(i_path)
                     df[0] = df1
             df = pd.concat(df)
-            df.to_csv(ps.path.join(path, 'inter', 'test.csv'))
+            df.to_csv(os.path.join(path, 'inter', 'test.csv'))
