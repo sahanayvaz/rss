@@ -4,6 +4,7 @@ save_dir=$1
 save_interval=25
 server_type=$2
 
+
 for seed in 0 17 41
 do
      early_final=6000000

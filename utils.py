@@ -259,10 +259,6 @@ def feat_rss_v0(out, feat_dim, activation, keep_dim, act_dim,
 # we are making a lot of changes
 def cr_fc_v0(out, ncat):
     # might not be necessary
-    # be careful about this
-    # this does NOT affect anything
-    if nentities:
-        hidsize = nentities
     
     # out = fc(out, 512, activation='relu', batchnormalize=False, init_scale=np.sqrt(2))
     # out = fc(out, 512, activation='relu', batchnormalize=False, init_scale=np.sqrt(2))
