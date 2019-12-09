@@ -38,12 +38,11 @@ for d in dirs:
             iters = data['iter'].tolist()
             if check_iter not in iters:
                 print('undone experiments: {}, iter: {}'.format(d, iters[-1]))
-                '''
                 model_spec = os.path.join(HOME, 'model_specs', '{}.json'.format(d))
                 subcommand = "python3 run.py --server_type LEONHARD --model_spec {} --restore_iter {}".format(model_spec, iters[-1])
                 command = "bsub -n 16 '{}'".format(subcommand)
                 os.system(command)
-                '''
+
     except:
         if 'MARIO' in d:
             print(d)
@@ -54,8 +53,11 @@ for d in dirs:
             os.system(command)
 
         elif 'COINRUN' in d:
+            '''
             print('undone experiments: {}, iter: {}'.format(d, iters[-1]))
             model_spec = os.path.join(HOME, 'model_specs', '{}.json'.format(d))
             subcommand = "python3 run.py --server_type LEONHARD --model_spec {} --restore_iter {}".format(model_spec, iters[-1])
             command = "bsub -n 16 '{}'".format(subcommand)
             os.system(command)
+            '''
+            pass
